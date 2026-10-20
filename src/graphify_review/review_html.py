@@ -1,6 +1,7 @@
 """Offline progressive-disclosure review renderer. No providers or external assets."""
 from __future__ import annotations
 
+import base64
 import hashlib
 import html
 import json
@@ -10,10 +11,17 @@ from urllib.parse import quote, urlsplit
 import networkx as nx
 
 from graphify_review.graphify_adapter import stable_ascii_id
+from graphify_review.textsafe import reveal_invisible
 
 
 def _esc(value: object) -> str:
-    return html.escape(str(value), quote=True)
+    """Escape for HTML and make invisible/bidirectional characters visible."""
+    return html.escape(reveal_invisible(str(value)), quote=True)
+
+
+def _hash_source(text: str) -> str:
+    """A CSP source for exactly this inline text."""
+    return "'sha256-" + base64.b64encode(hashlib.sha256(text.encode("utf-8")).digest()).decode("ascii") + "'"
 
 
 def _edge_key(edge: dict) -> tuple:
@@ -129,7 +137,9 @@ def _story(story: dict, index: int, analysis: dict) -> str:
     title = behavior["summary"] if behavior else f'Changes in {story["title"]}'
     pseudocode = ""
     if behavior:
-        pseudocode = '<span class="badge inferred">INFERRED · BEHAVIOR INTERPRETATION</span><div class="pair">' + "".join(
+        label = ("MODEL-WRITTEN NARRATION · INFERRED" if behavior.get("method") == "external_narration"
+                 else "INFERRED · BEHAVIOR INTERPRETATION")
+        pseudocode = f'<span class="badge inferred">{label}</span><div class="pair">' + "".join(
             f'<div class="pseudocode"><h3>{side.upper()}</h3><pre><code>{_esc(behavior[f"{side}_pseudocode"])}</code></pre></div>' for side in ("before", "after")) + "</div>"
         pseudocode += _source_links(behavior["evidence_ids"])
         if behavior["uncertainties"]:
@@ -201,12 +211,81 @@ def _evidence(review: dict) -> str:
 
 
 STYLE = """
+.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;background:#e5edf7;color:#3c5573}.risk-medium{background:#fff4dc;color:#7a5600}.risk-high,.check-fail{background:#fbe4e7;color:#8a1f2e}.risk-low,.check-ok{background:#e3f4ec;color:#0f5d43}.narration{background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 20px 14px;margin:14px 0}
 :root{color-scheme:light;--ink:#162536;--muted:#52647a;--line:#dbe3ec;--blue:#245db4}
 *{box-sizing:border-box}body{margin:0;background:#f5f7fa;color:var(--ink);font:16px/1.6 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
 main{max-width:1400px;margin:auto;padding:35px 35px 75px}h1{font-size:clamp(30px,4vw,46px);line-height:1.18;letter-spacing:-.035em;margin:16px 0}h2{font-size:25px;letter-spacing:-.02em;margin:0 0 14px}h3{font-size:14px;margin:16px 0 10px}p{margin:10px 0}a{color:var(--blue)}section{margin:35px 0;scroll-margin-top:20px}.eyebrow{font-size:12px;color:var(--blue);letter-spacing:.1em;font-weight:750;text-transform:uppercase}.revisions,.caption{font-size:12px;color:var(--muted)}nav{display:flex;gap:24px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:18px 0}nav a{text-decoration:none;font-weight:650;font-size:14px}.stats{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}.stat{background:#fff;border:1px solid var(--line);border-radius:9px;padding:12px 20px;min-width:150px}.stat b{display:block;font-size:25px}.stat span{font-size:12px;color:var(--muted)}.warning{background:#fff4dc;border-left:3px solid #bc8b22;padding:10px 14px;font-size:13px}.uncertainty{background:#fff4dc;padding:12px 30px;font-size:13px}.badge{display:inline-block;font-size:10px;font-weight:750;letter-spacing:.05em;background:#e5edf7;color:#3c5573;padding:3px 7px;border-radius:5px}.inferred{background:#eee8fb;color:#6345a2}.story{background:white;border:1px solid var(--line);border-radius:12px;margin:15px 0;overflow:hidden}.story>summary{display:flex;gap:16px;align-items:start;padding:22px;cursor:pointer}.story-number{font-size:17px;color:var(--blue);font-weight:700}.story summary strong{font-size:17px}.story summary small{display:block;color:var(--muted);font-size:12px;margin-top:5px}.story-body{padding:0 24px 24px}.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}.pair>*{min-width:0}.pseudocode{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:15px}.pseudocode h3{margin:0;padding:11px 16px;background:#edf2f8;font-size:11px;letter-spacing:.08em}.pseudocode:nth-child(2) h3{background:#eaf5f0}.pseudocode pre{white-space:pre-wrap;overflow-wrap:anywhere}pre{font:12px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;tab-size:4;padding:17px;background:#f7f9fc;margin:0}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em}.diagram{overflow:auto;background:#f9fbfd;border:1px solid var(--line);border-radius:9px}.diagram svg{display:block;width:100%;min-width:540px}.node-label{font:13px system-ui,sans-serif;fill:#162536}.node-status{font:9px system-ui,sans-serif;font-weight:750}.edge-label{font:10px system-ui,sans-serif;fill:#52647a;paint-order:stroke;stroke:#f9fbfd;stroke-width:3px}.source-links{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}.source-links a{padding:4px 9px;background:#edf2f8;border-radius:5px;text-decoration:none;font-size:12px}.subdetail,.evidence{border:1px solid var(--line);border-radius:8px;margin:12px 0;background:#fff;overflow:hidden}.subdetail summary,.evidence summary{padding:13px 16px;cursor:pointer;font-size:13px}.subdetail>p,.subdetail>ul{margin:12px 18px}.impact-card{background:#fff;border:1px solid var(--line);padding:20px;border-radius:12px}.evidence-body{padding:0 16px 16px}.evidence-body p{font-size:12px;color:var(--muted)}.evidence:target{outline:2px solid #759cd5;outline-offset:2px}.empty{color:var(--muted);font-size:13px;padding:12px 16px;background:#eef2f7;border-radius:7px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
 @media(max-width:760px){main{padding:22px 15px 50px}.pair{grid-template-columns:1fr}.story-body{padding:0 15px 18px}.story>summary{padding:17px}.stats{gap:8px}.stat{min-width:130px;flex:1}.diagram svg{min-width:480px}}
 @media print{details{display:block}details>*,details:not([open])>*{display:block}nav{display:none}.diagram svg{min-width:0}.pair{break-inside:avoid}}
 """
+
+
+RISK_LABEL = {"low": "Low", "medium": "Medium", "high": "High"}
+CHECK_LABEL = {"ok": "Passed", "fail": "Failed", "skipped": "Skipped"}
+SAFETY_LABEL = {"safe": "Yes", "mostly": "Mostly", "careful": "Be careful", "unsafe": "No"}
+
+
+def _overview(review: dict) -> str:
+    structure = review["structure"]
+    level = structure["risk"]["level"]
+    out = ['<section id="overview"><h2>Overview</h2>']
+    chips = [f'<span class="chip risk-{level}">Structural risk: {RISK_LABEL[level]}</span>']
+    chips += [f'<span class="chip check-{c["status"]}">{_esc(c["name"])}: {CHECK_LABEL[c["status"]]}</span>' for c in review["checks"]]
+    out.append('<p class="chips">' + "".join(chips) + "</p>")
+    if structure["risk"]["reasons"]:
+        out.append("<ul>" + "".join(f"<li>{_esc(r)}</li>" for r in structure["risk"]["reasons"]) + "</ul>")
+    out.append('<p class="caption">Risk is a structural heuristic from dependents, tests and change size. It does not predict defects.</p>')
+    narration = review.get("narration")
+    if narration:
+        who = f' · {_esc(narration["narrator"])}' if narration.get("narrator") else ""
+        out.append(f'<div class="narration"><span class="badge inferred">MODEL-WRITTEN · INFERRED{who}</span>')
+        if narration.get("headline"):
+            out.append(f'<h3>{_esc(narration["headline"])}</h3>')
+        if narration.get("summary"):
+            out.append("".join(f"<p>{_esc(part)}</p>" for part in narration["summary"].split("\n\n")))
+        if narration.get("safety"):
+            out.append(f'<p><b>Is it safe?</b> {SAFETY_LABEL[narration["safety"]["level"]]}. {_esc(narration["safety"]["text"])}</p>')
+        if narration.get("look"):
+            out.append("<h3>Look at these first (written)</h3><ol>" + "".join(
+                f'<li><b>{_esc(i["title"])}</b>' + (f' — {_esc(i["why"])}' if i.get("why") else "") + (f' <code>{_esc(i["where"])}</code>' if i.get("where") else "") + "</li>"
+                for i in narration["look"]) + "</ol>")
+        for key, title in (("not_proven", "What this does not prove"), ("confidence_note", "Confidence")):
+            if narration.get(key):
+                out.append(f'<p class="caption"><b>{title}.</b> {_esc(narration[key])}</p>')
+        out.append("</div>")
+    by_id = {s["id"]: s for s in structure["symbols"]}
+    if structure["look_first"]:
+        out.append("<h3>Look at these first (structural)</h3><ol>")
+        for symbol_id in structure["look_first"]:
+            symbol = by_id[symbol_id]
+            place = f'{symbol["file"]}:{symbol["line"]}' if symbol["line"] else symbol["file"]
+            out.append(f'<li><a href="#{_esc(symbol["story_id"])}"><b>{_esc(symbol["label"])}</b></a> ({_esc(symbol["status"])}) — {_esc("; ".join(symbol["reasons"]) or "structural change")} <code>{_esc(place)}</code></li>')
+        out.append("</ol>")
+    tests = structure["tests"]
+    active_symbols = [s for s in structure["symbols"] if not s["is_test"] and s["status"] != "removed"]
+    if tests["untested"]:
+        test_summary = "<p>No test reaches:</p><ul>" + "".join(f"<li>{_esc(n)}</li>" for n in tests["untested"][:50]) + "</ul>"
+    elif active_symbols:
+        test_summary = "<p>All analysed, retained symbols have a structural test link. This is not proof of executed coverage.</p>"
+    else:
+        test_summary = "<p>No retained changed symbols have test reachability to report.</p>"
+    if tests["unmapped_code_file_count"]:
+        test_summary += f'<p>{tests["unmapped_code_file_count"]} changed code files have no mapped symbols; test reachability is unknown.</p><ul>' + "".join(
+            f'<li>{_esc(name)}</li>' for name in tests["unmapped_code_files"]) + "</ul>"
+    if structure["omitted_symbols"]:
+        test_summary += f'<p>{structure["omitted_symbols"]} changed symbols were not analysed (budget).</p>'
+    hints = [s for s in active_symbols if s["class_tests"]]
+    if hints:
+        test_summary += "<p>Class-level test hints (method reachability is unknown):</p><ul>" + "".join(
+            f'<li>{_esc(s["label"])}: {_esc(", ".join(t["label"] for t in s["class_tests"]))}</li>'
+            for s in hints[:50]) + "</ul>"
+    out.append(f'<details class="subdetail"><summary>Tests and untested changes</summary><p>{tests["code_files_changed"]} code files and {tests["test_files_changed"]} test files changed.'
+               + (" Code changed without any test change." if tests["test_gap"] else "") + "</p>"
+               + test_summary + "</details>")
+    if review["checks"]:
+        out.append('<details class="subdetail" open><summary>Checks, tester and reviewer</summary><ul>' + "".join(
+            f'<li><b>{_esc(c["name"])}</b>: {CHECK_LABEL[c["status"]]}' + (f' — {_esc(c["text"])}' if c["text"] else "") + "</li>" for c in review["checks"]) + "</ul></details>")
+    return "".join(out) + "</section>"
 
 
 def render_review(review: dict) -> str:
@@ -238,9 +317,13 @@ def render_review(review: dict) -> str:
     stats = ((len(review["stories"]), "Retained change stories"), (behavior_count, "Behavior explanations"),
              (review["blast_radius"]["head"]["indirect_count"], "Head upstream dependents"),
              (len(review["blast_radius"]["head"]["communities"]), "Represented head communities"))
-    body = f'<div class="eyebrow">Graphify Review / Human review</div><h1>{_esc(target["title"])}</h1><p>Understand the change, explore its impact, and follow the evidence.</p><p class="revisions">Fixed comparison: <code>{_esc(target["comparison_base"][:12])}</code> → <code>{_esc(target["head"][:12])}</code></p><details class="subdetail"><summary>Revision details</summary><p>Comparison base <code>{_esc(target["comparison_base"])}</code><br>Head <code>{_esc(target["head"])}</code><br>Base tip <code>{_esc(target.get("base_tip", target["comparison_base"]))}</code> · {_esc(target["comparison_kind"])}</p></details><nav aria-label="Review sections"><a href="#changes">Change stories</a><a href="#impact">Blast radius</a><a href="#evidence">Source evidence</a></nav>'
+    body = f'<div class="eyebrow">Graphify Review / Human review</div><h1>{_esc(target["title"])}</h1><p>Understand the change, explore its impact, and follow the evidence.</p><p class="revisions">Fixed comparison: <code>{_esc(target["comparison_base"][:12])}</code> → <code>{_esc(target["head"][:12])}</code></p><details class="subdetail"><summary>Revision details</summary><p>Comparison base <code>{_esc(target["comparison_base"])}</code><br>Head <code>{_esc(target["head"])}</code><br>Base tip <code>{_esc(target.get("base_tip", target["comparison_base"]))}</code> · {_esc(target["comparison_kind"])}</p></details><nav aria-label="Review sections"><a href="#overview">Overview</a><a href="#changes">Change stories</a><a href="#impact">Blast radius</a><a href="#evidence">Source evidence</a></nav>'
     body += '<div class="stats">' + "".join(f'<div class="stat"><b>{value}</b><span>{_esc(label)}</span></div>' for value, label in stats) + "</div>"
+    redactions = review.get("redactions", {})
+    if redactions.get("count"):
+        warnings.append(f'{redactions["count"]} secret-looking values were redacted from this review.')
     body += "".join(f'<p class="warning">{_esc(w)}</p>' for w in warnings)
+    body += _overview(review)
     if target.get("description"):
         body += '<details class="subdetail"><summary>PR author’s description</summary><pre>' + _esc(target["description"]) + '</pre></details>'
     body += '<section id="changes"><h2>Review the change stories</h2><p>Start with pseudocode and the focused graphs. Expand a story when you need more context; graph relationships and source details remain attached.</p>'
@@ -248,4 +331,5 @@ def render_review(review: dict) -> str:
     body += '</section>' + _blast(review) + _evidence(review)
     body += '<section><h2>Coverage and uncertainty</h2><ul>' + "".join(f'<li>{_esc(limit)}</li>' for limit in review["limitations"]) + '</ul><details class="subdetail"><summary>Raw structural comparison, omitted records, and extraction coverage</summary><pre><code>' + _esc(json.dumps({"graph_diff": review["graph_diff"], "omitted_records": review["omitted_graph_records"], "coverage": review["coverage"]}, indent=2)) + '</code></pre></details></section>'
     body += f'<footer>Graphify Review · Explanations are INFERRED; citation validation does not prove semantic correctness. Required content works offline. External source links require a network connection.<br>Review model SHA-256: <code>{digest}</code></footer>'
-    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>' + _esc(target["title"]) + '</title><style>' + STYLE + '</style></head><body><main>' + body + '</main></body></html>'
+    csp = f"default-src 'none'; style-src {_hash_source(STYLE)}; base-uri 'none'; form-action 'none'"
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><title>' + _esc(target["title"]) + '</title><style>' + STYLE + '</style></head><body><main>' + body + '</main></body></html>'

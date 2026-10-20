@@ -40,10 +40,16 @@ uv tool install 'graphify-review[llm] @ git+https://github.com/mikkelkrogsholm/g
 graphify-review 42 --infer --backend ollama --model <configured-model>
 ```
 
-Provider configuration follows Graphify. The `llm` extra installs its OpenAI-compatible SDK support, including Ollama. Explanations always remain **INFERRED**, cite supplied base/head evidence, and expose uncertainties. Citation validation checks provenance, not semantic correctness. Missing providers or rejected responses leave the structural review usable with an explicit status.
+Provider configuration follows Graphify. The `llm` extra installs its OpenAI-compatible SDK support, including Ollama. An explanation written by another tool is accepted the same way with `--narration` and is validated identically. Explanations always remain **INFERRED**, cite supplied base/head evidence, and expose uncertainties. Citation validation checks provenance, not semantic correctness. Missing providers or rejected responses leave the structural review usable with an explicit status.
+
+## Using it from another tool
+
+Two refs are enough: no network, no forge client, and a read-only checkout works. Add `--facts` and `--evidence` for the analysis as data, `--narration` for an explanation written elsewhere, `--checks` for verdicts, and `--comment` with `--view-url` for a short markdown comment (about 3 KB) that links to the page. See [integration](docs/INTEGRATION.md) for the command lines and file formats.
 
 ## What the reviewer gets
 
+- A structural risk level with reasons, an ordered "look at these first" list, and tests that reach each changed symbol (or none).
+- Verdicts of checks, tester and reviewer when supplied.
 - Change stories and before/after behavioral pseudocode.
 - Bounded directed SVG graphs with consistent positions, confidence labels, and added/removed relationships.
 - Potential blast radius, unchanged dependents, and snapshot-local communities.

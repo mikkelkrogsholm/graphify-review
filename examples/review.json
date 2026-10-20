@@ -1,13 +1,13 @@
 {
-  "version": 1,
+  "version": 2,
   "target": {
     "type": "git_comparison",
     "title": "Require an MFA challenge before creating a session",
-    "base_tip": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
-    "comparison_base": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
-    "head": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+    "base_tip": "998fa51a29efdd4097767a4eadff2befb8fbc9eb",
+    "comparison_base": "998fa51a29efdd4097767a4eadff2befb8fbc9eb",
+    "head": "7808582ec73f3376a8b4d5a47b7c86d41232da5b",
     "comparison_kind": "merge_base",
-    "repository": "graphify-review-example-tysgi6tr"
+    "repository": "graphify-review-example-3pfzlugj"
   },
   "coverage": {
     "base": {
@@ -32,6 +32,9 @@
       "nodes": 6,
       "edges": 9
     }
+  },
+  "engine": {
+    "graphify": "0.9.92"
   },
   "graph_diff": {
     "new_nodes": [
@@ -321,7 +324,7 @@
       "id": "change-1-base-0",
       "kind": "source_diff",
       "side": "base",
-      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "revision": "998fa51a29efdd4097767a4eadff2befb8fbc9eb",
       "source_file": "auth.py",
       "line_start": 1,
       "line_end": 5,
@@ -332,7 +335,7 @@
       "id": "change-1-head-0",
       "kind": "source_diff",
       "side": "head",
-      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "revision": "7808582ec73f3376a8b4d5a47b7c86d41232da5b",
       "source_file": "auth.py",
       "line_start": 1,
       "line_end": 10,
@@ -343,7 +346,7 @@
       "id": "source-9dbe54032a57ac44",
       "kind": "graph_source",
       "side": "base",
-      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "revision": "998fa51a29efdd4097767a4eadff2befb8fbc9eb",
       "source_file": "app.py",
       "line_start": 1,
       "line_end": 4,
@@ -353,7 +356,7 @@
       "id": "source-ef6dc636fab6f897",
       "kind": "graph_source",
       "side": "base",
-      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "revision": "998fa51a29efdd4097767a4eadff2befb8fbc9eb",
       "source_file": "app.py",
       "line_start": 3,
       "line_end": 4,
@@ -363,7 +366,7 @@
       "id": "source-06077375e7f7f8e1",
       "kind": "graph_source",
       "side": "base",
-      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "revision": "998fa51a29efdd4097767a4eadff2befb8fbc9eb",
       "source_file": "auth.py",
       "line_start": 4,
       "line_end": 5,
@@ -373,7 +376,7 @@
       "id": "source-fc6eb35c6af041d4",
       "kind": "graph_source",
       "side": "base",
-      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "revision": "998fa51a29efdd4097767a4eadff2befb8fbc9eb",
       "source_file": "app.py",
       "line_start": 4,
       "line_end": 4,
@@ -383,7 +386,7 @@
       "id": "source-64c034e6d5f1e0e1",
       "kind": "graph_source",
       "side": "base",
-      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "revision": "998fa51a29efdd4097767a4eadff2befb8fbc9eb",
       "source_file": "auth.py",
       "line_start": 2,
       "line_end": 5,
@@ -393,7 +396,7 @@
       "id": "source-b24cb351625ead30",
       "kind": "graph_source",
       "side": "head",
-      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "revision": "7808582ec73f3376a8b4d5a47b7c86d41232da5b",
       "source_file": "app.py",
       "line_start": 1,
       "line_end": 4,
@@ -403,7 +406,7 @@
       "id": "source-78cad8873055a7cb",
       "kind": "graph_source",
       "side": "head",
-      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "revision": "7808582ec73f3376a8b4d5a47b7c86d41232da5b",
       "source_file": "app.py",
       "line_start": 3,
       "line_end": 4,
@@ -413,7 +416,7 @@
       "id": "source-c703ab4eee8e7a0b",
       "kind": "graph_source",
       "side": "head",
-      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "revision": "7808582ec73f3376a8b4d5a47b7c86d41232da5b",
       "source_file": "auth.py",
       "line_start": 6,
       "line_end": 10,
@@ -423,7 +426,7 @@
       "id": "source-b6c595aa8cf44144",
       "kind": "graph_source",
       "side": "head",
-      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "revision": "7808582ec73f3376a8b4d5a47b7c86d41232da5b",
       "source_file": "auth.py",
       "line_start": 9,
       "line_end": 10,
@@ -433,7 +436,7 @@
       "id": "source-31ca10285eca5610",
       "kind": "graph_source",
       "side": "head",
-      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "revision": "7808582ec73f3376a8b4d5a47b7c86d41232da5b",
       "source_file": "app.py",
       "line_start": 4,
       "line_end": 4,
@@ -443,7 +446,7 @@
       "id": "source-f387138eac9d8456",
       "kind": "graph_source",
       "side": "head",
-      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "revision": "7808582ec73f3376a8b4d5a47b7c86d41232da5b",
       "source_file": "auth.py",
       "line_start": 3,
       "line_end": 8,
@@ -453,7 +456,7 @@
       "id": "source-05694e42d140d2f6",
       "kind": "graph_source",
       "side": "head",
-      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "revision": "7808582ec73f3376a8b4d5a47b7c86d41232da5b",
       "source_file": "auth.py",
       "line_start": 4,
       "line_end": 9,
@@ -719,12 +722,130 @@
     "unexplained_stories": 0,
     "illustrative": true
   },
+  "checks": [],
+  "narration": null,
   "limitations": [
     "Dependency graphs describe structural relationships, not execution order or predicted failures.",
     "Graph comparison follows Graphify's current builder; parallel relations can collapse.",
     "Records whose identities contain the temporary snapshot path are excluded and counted in coverage.",
-    "Community IDs are local to each snapshot. Dynamic dispatch and unsupported languages limit coverage."
+    "Community IDs are local to each snapshot. Dynamic dispatch and unsupported languages limit coverage.",
+    "Risk is a structural heuristic from dependents, tests and change size; it does not predict defects.",
+    "Test links follow dependency edges; a test that reaches code dynamically is not seen."
   ],
   "changed_file_count": 1,
-  "omitted_change_stories": 0
+  "omitted_change_stories": 0,
+  "structure": {
+    "method": "structural_heuristic",
+    "symbols": [
+      {
+        "id": "auth_authenticate",
+        "label": "authenticate()",
+        "file": "auth.py",
+        "line": 1,
+        "kind": "function",
+        "status": "changed",
+        "story_id": "change-1",
+        "mapping": "python_ast_span",
+        "is_test": false,
+        "dependents": [
+          {
+            "id": "app_login",
+            "label": "login()",
+            "file": "app.py",
+            "line": 3,
+            "relation": "calls",
+            "depth": 1
+          },
+          {
+            "id": "app",
+            "label": "app.py",
+            "file": "app.py",
+            "line": 1,
+            "relation": "imports",
+            "depth": 1
+          }
+        ],
+        "tests": [],
+        "class_tests": [],
+        "tests_from": null,
+        "dependent_count": 2,
+        "dependent_files": 1,
+        "test_count": 0,
+        "risk": "medium",
+        "reasons": [
+          "2 places depend on it",
+          "no test reaches it"
+        ]
+      },
+      {
+        "id": "auth_challenge",
+        "label": "challenge()",
+        "file": "auth.py",
+        "line": 6,
+        "kind": "function",
+        "status": "added",
+        "story_id": "change-1",
+        "mapping": "python_ast_span",
+        "is_test": false,
+        "dependents": [
+          {
+            "id": "app_login",
+            "label": "login()",
+            "file": "app.py",
+            "line": 3,
+            "relation": "calls",
+            "depth": 2
+          },
+          {
+            "id": "app",
+            "label": "app.py",
+            "file": "app.py",
+            "line": 1,
+            "relation": "imports",
+            "depth": 2
+          }
+        ],
+        "tests": [],
+        "class_tests": [],
+        "tests_from": null,
+        "dependent_count": 2,
+        "dependent_files": 1,
+        "test_count": 0,
+        "risk": "medium",
+        "reasons": [
+          "2 places depend on it",
+          "no test reaches it"
+        ]
+      }
+    ],
+    "omitted_symbols": 0,
+    "risk": {
+      "level": "medium",
+      "reasons": [
+        "authenticate() (2 places depend on it, no test reaches it)",
+        "code changed without any test changes"
+      ]
+    },
+    "tests": {
+      "code_files_changed": 1,
+      "test_files_changed": 0,
+      "test_gap": true,
+      "untested": [
+        "authenticate()",
+        "challenge()"
+      ],
+      "unmapped_code_file_count": 0,
+      "unmapped_code_files": []
+    },
+    "look_first": [
+      "auth_authenticate",
+      "auth_challenge"
+    ]
+  },
+  "redactions": {
+    "enabled": true,
+    "environment": false,
+    "count": 0,
+    "kinds": {}
+  }
 }

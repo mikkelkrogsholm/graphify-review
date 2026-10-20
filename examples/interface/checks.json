@@ -1,0 +1,12 @@
+[
+  {
+    "name": "tests",
+    "status": "ok",
+    "text": "authored example"
+  },
+  {
+    "name": "reviewer",
+    "status": "fail",
+    "text": "authored example: removed helper is still used"
+  }
+]

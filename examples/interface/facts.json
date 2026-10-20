@@ -1,0 +1,202 @@
+{
+  "checks": [
+    {
+      "name": "tests",
+      "status": "ok",
+      "text": "authored example"
+    },
+    {
+      "name": "reviewer",
+      "status": "fail",
+      "text": "authored example: removed helper is still used"
+    }
+  ],
+  "counts": {
+    "changed_files": 1,
+    "changed_symbols": 3,
+    "dependents": 3,
+    "stories": 1,
+    "tests_reaching": 1
+  },
+  "engine": {
+    "graphify": "0.9.92"
+  },
+  "files": [
+    {
+      "evidence_ids": [
+        "change-1-base-0",
+        "change-1-head-0"
+      ],
+      "file": "billing.py",
+      "status": "M",
+      "story_id": "change-1"
+    }
+  ],
+  "limits": [
+    "Dependency graphs describe structural relationships, not execution order or predicted failures.",
+    "Graph comparison follows Graphify's current builder; parallel relations can collapse.",
+    "Records whose identities contain the temporary snapshot path are excluded and counted in coverage.",
+    "Community IDs are local to each snapshot. Dynamic dispatch and unsupported languages limit coverage.",
+    "Risk is a structural heuristic from dependents, tests and change size; it does not predict defects.",
+    "Test links follow dependency edges; a test that reaches code dynamically is not seen."
+  ],
+  "look_first": [
+    "billing_legacy_tax",
+    "billing_total",
+    "billing_rounding"
+  ],
+  "redactions": {
+    "count": 0,
+    "enabled": true,
+    "environment": false,
+    "kinds": {}
+  },
+  "risk": {
+    "level": "high",
+    "reasons": [
+      "legacy_tax() (removed, but 2 places still use it)",
+      "code changed without any test changes"
+    ]
+  },
+  "risk_method": "structural_heuristic",
+  "schema": "graphify-review/facts/1",
+  "symbols": [
+    {
+      "class_tests": [],
+      "dependent_count": 2,
+      "dependent_files": 1,
+      "dependents": [
+        {
+          "depth": 1,
+          "file": "checkout.py",
+          "id": "checkout_checkout",
+          "label": "checkout()",
+          "line": 3,
+          "relation": "calls"
+        },
+        {
+          "depth": 1,
+          "file": "checkout.py",
+          "id": "checkout",
+          "label": "checkout.py",
+          "line": 1,
+          "relation": "imports"
+        }
+      ],
+      "file": "billing.py",
+      "id": "billing_legacy_tax",
+      "is_test": false,
+      "kind": "function",
+      "label": "legacy_tax()",
+      "line": 1,
+      "mapping": "python_ast_span",
+      "reasons": [
+        "removed, but 2 places still use it"
+      ],
+      "risk": "high",
+      "status": "removed",
+      "story_id": "change-1",
+      "test_count": 0,
+      "tests": [],
+      "tests_from": null
+    },
+    {
+      "class_tests": [],
+      "dependent_count": 3,
+      "dependent_files": 1,
+      "dependents": [
+        {
+          "depth": 1,
+          "file": "checkout.py",
+          "id": "checkout_checkout",
+          "label": "checkout()",
+          "line": 3,
+          "relation": "calls"
+        },
+        {
+          "depth": 1,
+          "file": "checkout.py",
+          "id": "checkout_preview",
+          "label": "preview()",
+          "line": 6,
+          "relation": "calls"
+        },
+        {
+          "depth": 1,
+          "file": "checkout.py",
+          "id": "checkout",
+          "label": "checkout.py",
+          "line": 1,
+          "relation": "imports"
+        }
+      ],
+      "file": "billing.py",
+      "id": "billing_total",
+      "is_test": false,
+      "kind": "function",
+      "label": "total()",
+      "line": 1,
+      "mapping": "python_ast_span",
+      "reasons": [
+        "3 places depend on it"
+      ],
+      "risk": "medium",
+      "status": "changed",
+      "story_id": "change-1",
+      "test_count": 1,
+      "tests": [
+        {
+          "depth": 1,
+          "file": "tests/test_billing.py",
+          "id": "tests_test_billing_test_total",
+          "label": "test_total()",
+          "line": 3,
+          "relation": "calls"
+        }
+      ],
+      "tests_from": null
+    },
+    {
+      "class_tests": [],
+      "dependent_count": 0,
+      "dependent_files": 0,
+      "dependents": [],
+      "file": "billing.py",
+      "id": "billing_rounding",
+      "is_test": false,
+      "kind": "function",
+      "label": "rounding()",
+      "line": 4,
+      "mapping": "python_ast_span",
+      "reasons": [
+        "no test reaches it"
+      ],
+      "risk": "medium",
+      "status": "added",
+      "story_id": "change-1",
+      "test_count": 0,
+      "tests": [],
+      "tests_from": null
+    }
+  ],
+  "target": {
+    "base_tip": "3d732415a7d8e419d88abed2486cdace158204a9",
+    "comparison_base": "3d732415a7d8e419d88abed2486cdace158204a9",
+    "comparison_kind": "merge_base",
+    "head": "246c21b3c2a6a238efdd80aeb89e60c469a3de65",
+    "repository": "graphify-review-interface-zj7onzpi",
+    "title": "Round totals and retire the legacy tax helper",
+    "type": "git_comparison"
+  },
+  "tests": {
+    "code_files_changed": 1,
+    "test_files_changed": 0,
+    "test_gap": true,
+    "unmapped_code_file_count": 0,
+    "unmapped_code_files": [],
+    "untested": [
+      "rounding()"
+    ]
+  },
+  "tool_version": "0.1.0"
+}

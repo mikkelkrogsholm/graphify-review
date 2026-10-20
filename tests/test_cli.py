@@ -59,13 +59,13 @@ def test_module_entry_point_uses_custom_output_and_preserves_project_state(repos
     assert result.returncode == 0, result.stderr
     files = list(output.glob("reviews/*/review.json"))
     assert len(files) == 1
-    review = json.loads(files[0].read_text())
+    review = json.loads(files[0].read_text(encoding="utf-8"))
     assert review["target"]["head"] == head
     assert "→" in review["target"]["title"]
     assert review["behavior_analysis"]["status"] == "not_requested"
-    assert "DIRTY WORKTREE" not in files[0].read_text()
+    assert "DIRTY WORKTREE" not in files[0].read_text(encoding="utf-8")
     assert files[0].with_suffix(".html").exists()
-    assert (root / "auth.py").read_text() == "DIRTY WORKTREE"
+    assert (root / "auth.py").read_text(encoding="utf-8") == "DIRTY WORKTREE"
     assert git(root, "diff", "--cached") == index
     assert git(root, "rev-parse", "HEAD") == head
     assert {p.name: p.read_bytes() for p in canonical.iterdir()} == before

@@ -26,7 +26,7 @@ def test_only_adapter_imports_graphify_in_production():
     for path in source.glob("*.py"):
         if path.name == "graphify_adapter.py":
             continue
-        tree = ast.parse(path.read_text())
+        tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
                 assert not (node.module == "graphify" or (node.module or "").startswith("graphify."))

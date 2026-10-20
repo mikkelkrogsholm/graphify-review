@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -39,7 +40,8 @@ def test_help_and_version_do_not_initialize_graphify(option):
     assert "graphify-review" in result.stdout
 
 
-def test_module_entry_point_uses_custom_output_and_preserves_project_state(repository, tmp_path):
+@pytest.mark.parametrize("stream_encoding", ["utf-8", "cp1252", "ascii"])
+def test_module_entry_point_uses_custom_output_and_preserves_project_state(repository, tmp_path, stream_encoding):
     root, base, head = repository
     canonical = root / "graphify-out"
     canonical.mkdir()
@@ -49,15 +51,17 @@ def test_module_entry_point_uses_custom_output_and_preserves_project_state(repos
     (root / "auth.py").write_text("DIRTY WORKTREE", encoding="utf-8")
     git(root, "add", "auth.py")
     index = git(root, "diff", "--cached")
-    output = tmp_path / "reviews with spaces"
+    output = tmp_path / "reviews with spaces 漢"
     result = subprocess.run([sys.executable, "-m", "graphify_review", "--base", base,
                              "--head", head, "--output", str(output)], cwd=root,
-                            capture_output=True, text=True, timeout=60)
+                            env={**os.environ, "PYTHONIOENCODING": stream_encoding},
+                            capture_output=True, text=True, encoding=stream_encoding, timeout=60)
     assert result.returncode == 0, result.stderr
     files = list(output.glob("reviews/*/review.json"))
     assert len(files) == 1
     review = json.loads(files[0].read_text())
     assert review["target"]["head"] == head
+    assert "→" in review["target"]["title"]
     assert review["behavior_analysis"]["status"] == "not_requested"
     assert "DIRTY WORKTREE" not in files[0].read_text()
     assert files[0].with_suffix(".html").exists()

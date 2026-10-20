@@ -5,8 +5,15 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import TextIO
 
 from graphify_review import __version__
+
+
+def _print_console(message: str, stream: TextIO) -> None:
+    """Keep redirected legacy consoles usable; artifacts retain their UTF-8 text."""
+    encoding = getattr(stream, "encoding", None) or "utf-8"
+    print(message.encode(encoding, errors="backslashreplace").decode(encoding), file=stream)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -22,7 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--infer", action="store_true", help="Request cited behavioral pseudocode.")
     parser.add_argument("--backend", help="Existing Graphify provider (requires --infer).")
     parser.add_argument("--model", help="Model for the selected provider (requires --infer).")
-    parser.add_argument("--depth", type=int, default=2, help="Blast-radius depth, 0–6 (default 2).")
+    parser.add_argument("--depth", type=int, default=2, help="Blast-radius depth, 0-6 (default 2).")
     parser.add_argument("--output", type=Path, help="Output root (default: graphify-review-out).")
     args = parser.parse_args(argv)
     if not 0 <= args.depth <= 6:
@@ -53,8 +60,9 @@ def main(argv: list[str] | None = None) -> int:
                               backend=args.backend, model=args.model)
         json_path, html_path = save_review(review, root, output=args.output)
     except (RuntimeError, ValueError, OSError, KeyError, json.JSONDecodeError) as exc:
-        print(f"Review failed: {exc}", file=sys.stderr)
+        _print_console(f"Review failed: {exc}", sys.stderr)
         return 1
-    print(f"Review generated: {target['title']}\nChange stories: {len(review['stories'])}\n"
-          f"Behavior analysis: {review['behavior_analysis']['status']}\nJSON: {json_path}\nHTML: {html_path}")
+    _print_console(f"Review generated: {target['title']}\nChange stories: {len(review['stories'])}\n"
+                   f"Behavior analysis: {review['behavior_analysis']['status']}\nJSON: {json_path}\nHTML: {html_path}",
+                   sys.stdout)
     return 0

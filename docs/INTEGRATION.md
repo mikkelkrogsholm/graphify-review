@@ -25,6 +25,8 @@ Exit codes: `0` written (a missing or invalid narration or checks file is only a
 
 `risk` (`level`: low/medium/high, `reasons`) and `risk_method` (`structural_heuristic`); `counts` (changed symbols, dependents, tests reaching, changed files, stories); `tests` (code and test files changed, `test_gap`, `untested`); `look_first` (symbol IDs, riskiest first); `symbols` (per changed symbol: label, kind, file, line, status `changed|added|removed`, risk and reasons, dependent and test counts, up to 12 listed dependents and tests, `story_id`, `mapping`); `files`; `checks`; `redactions`; `limits`; `target`; `engine`. No source text and no model words are in it.
 
+`symbols[].tests` and `test_count` describe structural test links. `class_tests` lists separate class-level hints; `tests_from` identifies their owning class. These hints do not establish method coverage and do not contribute to test counts. `tests.unmapped_code_file_count` and up to 50 `unmapped_code_files` disclose changed admitted code files without mapped symbols, including changes to module-level constants. Their test reachability is unknown. Code-file counts do not depend on the symbol/story budgets.
+
 ## `evidence.json` (schema `graphify-review/evidence/1`)
 
 Bounded cited source for the writer of an explanation: per story the excerpts (`id`, `side`, `revision`, `source_file`, line range, `snippet`), a cut patch, whether it is `narratable`, and the symbols involved; plus `risk`, `symbols` and `narration_contract`, which spells out the accepted narration shape. All source text is untrusted data. Stories beyond the budget are listed without excerpts and counted in `limits`.

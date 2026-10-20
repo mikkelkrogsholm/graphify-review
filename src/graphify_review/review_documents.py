@@ -35,7 +35,8 @@ def _target(review: dict) -> dict:
 def _symbol_rows(review: dict, *, listed: int) -> list[dict]:
     keys = ("id", "label", "kind", "file", "line", "status", "risk", "reasons", "story_id", "mapping",
             "is_test", "dependent_count", "dependent_files", "test_count", "tests_from")
-    return [{**{k: s[k] for k in keys}, "dependents": s["dependents"][:listed], "tests": s["tests"][:listed]}
+    return [{**{k: s[k] for k in keys}, "dependents": s["dependents"][:listed], "tests": s["tests"][:listed],
+             "class_tests": s["class_tests"][:listed]}
             for s in review["structure"]["symbols"]]
 
 
@@ -154,7 +155,7 @@ def render_comment(review: dict, view_url: str, *, max_bytes: int = MAX_COMMENT_
     symbols = [s for s in structure["symbols"] if not s["is_test"]]
     did = narration.get("summary") or narration.get("headline") or (
         f"{len(symbols)} changed function(s) or class(es) in {structure['tests']['code_files_changed']} code file(s)."
-        if symbols else "No function or class changed.")
+        if symbols else f"{structure['tests']['code_files_changed']} code file(s) changed; no function or class changes were mapped.")
     if narration.get("safety"):
         safe = f"{SAFETY_MARK[narration['safety']['level']]}. {narration['safety']['text']}"
     else:

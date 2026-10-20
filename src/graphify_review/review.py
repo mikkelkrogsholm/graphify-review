@@ -332,7 +332,12 @@ def build_review(root: Path, target: dict, *, depth: int = 2, infer: bool = Fals
                 record["community"] = membership.get(record["id"])
             result["blast_radius"][side] = radius
         _add_graph_evidence(result, graphs, snapshots)
-        result["structure"] = analyze_structure(graphs, story_seeds, changes[:MAX_CHANGE_STORIES], depth)
+        # Classify admitted committed sources inside their isolated snapshots. File
+        # counts must not depend on extraction success or the symbol/story budget.
+        code_files = {side: {name for name in snapshot["sources"]
+                             if classify_file(Path(snapshot["root"]) / name) == FileType.CODE}
+                      for side, snapshot in snapshots.items()}
+        result["structure"] = analyze_structure(graphs, story_seeds, changes, depth, code_files=code_files)
     redactor = Redactor(os.environ if redact_env else None) if redact else None
     if redactor:
         result = redactor.walk(result)

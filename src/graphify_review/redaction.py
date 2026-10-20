@@ -44,28 +44,36 @@ class Redactor:
         self.counts[kind] = self.counts.get(kind, 0) + 1
         return f"[redacted: {kind}]"
 
-    def _private_keys(self, value: str) -> str:
-        """Line-based, so a missing END line or a body-only excerpt is still handled."""
+    def _private_keys(self, value: str, *, diff: bool = False) -> str:
+        """Handle cut key blocks; ignore diff markers for detection and retain them in output."""
         if "PRIVATE KEY" not in value and not _BODY_LINE.search(value):
             return value
         lines = value.split("\n")
+
+        def body(line: str) -> str:
+            return (line[1:] if diff and line[:1] in (" ", "+", "-") else line).strip()
+
+        def replacement(line: str) -> str:
+            prefix = line[:1] if diff and line[:1] in (" ", "+", "-") else ""
+            return prefix + self._note("private key")
+
         out: list[str] = []
         inside = False
         index = 0
         while index < len(lines):
             line = lines[index]
             if inside:
-                out.append(self._note("private key"))
+                out.append(replacement(line))
                 inside = not _END.search(line)
             elif _BEGIN.search(line):
-                out.append(self._note("private key"))
+                out.append(replacement(line))
                 inside = not _END.search(line)
-            elif _BODY_LINE.fullmatch(line.strip()):
+            elif _BODY_LINE.fullmatch(body(line)):
                 run = index
-                while run < len(lines) and _BODY_LINE.fullmatch(lines[run].strip()):
+                while run < len(lines) and _BODY_LINE.fullmatch(body(lines[run])):
                     run += 1
                 if run - index >= _BODY_RUN:
-                    out.extend(self._note("private key") for _ in range(run - index))
+                    out.extend(replacement(item) for item in lines[index:run])
                     index = run
                     continue
                 out.append(line)
@@ -74,8 +82,8 @@ class Redactor:
             index += 1
         return "\n".join(out)
 
-    def text(self, value: str) -> str:
-        value = self._private_keys(value)
+    def text(self, value: str, *, diff: bool = False) -> str:
+        value = self._private_keys(value, diff=diff)
         for kind, pattern in _PATTERNS:
             if kind in ("bearer token", "url credentials"):
                 value = pattern.sub(lambda m, k=kind: m.group(1) + self._note(k) + ("@" if k == "url credentials" else ""), value)
@@ -95,7 +103,8 @@ class Redactor:
         if isinstance(value, list):
             return [self.walk(item) for item in value]
         if isinstance(value, dict):
-            return {key: self.walk(item) for key, item in value.items()}
+            return {key: self.text(item, diff=True) if key == "patch" and isinstance(item, str) else self.walk(item)
+                    for key, item in value.items()}
         return value
 
     def summary(self) -> dict:

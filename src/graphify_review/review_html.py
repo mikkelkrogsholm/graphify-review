@@ -262,10 +262,26 @@ def _overview(review: dict) -> str:
             out.append(f'<li><a href="#{_esc(symbol["story_id"])}"><b>{_esc(symbol["label"])}</b></a> ({_esc(symbol["status"])}) — {_esc("; ".join(symbol["reasons"]) or "structural change")} <code>{_esc(place)}</code></li>')
         out.append("</ol>")
     tests = structure["tests"]
+    active_symbols = [s for s in structure["symbols"] if not s["is_test"] and s["status"] != "removed"]
+    if tests["untested"]:
+        test_summary = "<p>No test reaches:</p><ul>" + "".join(f"<li>{_esc(n)}</li>" for n in tests["untested"][:50]) + "</ul>"
+    elif active_symbols:
+        test_summary = "<p>All analysed, retained symbols have a structural test link. This is not proof of executed coverage.</p>"
+    else:
+        test_summary = "<p>No retained changed symbols have test reachability to report.</p>"
+    if tests["unmapped_code_file_count"]:
+        test_summary += f'<p>{tests["unmapped_code_file_count"]} changed code files have no mapped symbols; test reachability is unknown.</p><ul>' + "".join(
+            f'<li>{_esc(name)}</li>' for name in tests["unmapped_code_files"]) + "</ul>"
+    if structure["omitted_symbols"]:
+        test_summary += f'<p>{structure["omitted_symbols"]} changed symbols were not analysed (budget).</p>'
+    hints = [s for s in active_symbols if s["class_tests"]]
+    if hints:
+        test_summary += "<p>Class-level test hints (method reachability is unknown):</p><ul>" + "".join(
+            f'<li>{_esc(s["label"])}: {_esc(", ".join(t["label"] for t in s["class_tests"]))}</li>'
+            for s in hints[:50]) + "</ul>"
     out.append(f'<details class="subdetail"><summary>Tests and untested changes</summary><p>{tests["code_files_changed"]} code files and {tests["test_files_changed"]} test files changed.'
                + (" Code changed without any test change." if tests["test_gap"] else "") + "</p>"
-               + ("<p>No test reaches:</p><ul>" + "".join(f"<li>{_esc(n)}</li>" for n in tests["untested"][:50]) + "</ul>" if tests["untested"] else "<p>Every changed symbol is reached by a test.</p>")
-               + "</details>")
+               + test_summary + "</details>")
     if review["checks"]:
         out.append('<details class="subdetail" open><summary>Checks, tester and reviewer</summary><ul>' + "".join(
             f'<li><b>{_esc(c["name"])}</b>: {CHECK_LABEL[c["status"]]}' + (f' — {_esc(c["text"])}' if c["text"] else "") + "</li>" for c in review["checks"]) + "</ul></details>")

@@ -114,3 +114,24 @@ def test_redaction_marks_committed_secrets_and_is_disclosed(tmp_path):
     assert model["redactions"]["count"] >= 1 and "were redacted" in page
     kept = review.build_review(root, git_target(root, b, h), redact=False)
     assert secret in repr(kept) and kept["redactions"]["enabled"] is False
+
+
+def test_private_key_changes_are_redacted_in_excerpts_patch_and_exports(tmp_path):
+    from graphify_review.review_documents import dump, evidence_document
+
+    old, new = "M" * 64, "N" * 64
+    lines = [letter * 64 for letter in "ABCDE"] + [old] + [letter * 64 for letter in "GHIJKL"]
+
+    def source(body):
+        return 'KEY = """-----BEGIN RSA PRIVATE KEY-----\n' + "\n".join(body) + '\n-----END RSA PRIVATE KEY-----\n"""\n'
+
+    before = source(lines)
+    lines[5] = new
+    root, base, head = make_repo(tmp_path, {"config.py": before}, {"config.py": source(lines)})
+    model = review.build_review(root, git_target(root, base, head))
+    patch = model["stories"][0]["source"]["patch"]
+    assert "PRIVATE KEY-----" not in patch  # the hunk does not include the PEM header
+    assert "-[redacted: private key]" in patch and "+[redacted: private key]" in patch
+    for output in (repr(model), render_review(model), dump(evidence_document(model))):
+        assert old not in output and new not in output
+    review.validate_review(model)

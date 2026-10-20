@@ -62,6 +62,7 @@
   "schema": "graphify-review/facts/1",
   "symbols": [
     {
+      "class_tests": [],
       "dependent_count": 2,
       "dependent_files": 1,
       "dependents": [
@@ -100,6 +101,7 @@
       "tests_from": null
     },
     {
+      "class_tests": [],
       "dependent_count": 3,
       "dependent_files": 1,
       "dependents": [
@@ -155,6 +157,7 @@
       "tests_from": null
     },
     {
+      "class_tests": [],
       "dependent_count": 0,
       "dependent_files": 0,
       "dependents": [],
@@ -177,11 +180,11 @@
     }
   ],
   "target": {
-    "base_tip": "cbaf49718fe736deeeb1b69d010fc2d11f7060d9",
-    "comparison_base": "cbaf49718fe736deeeb1b69d010fc2d11f7060d9",
+    "base_tip": "3d732415a7d8e419d88abed2486cdace158204a9",
+    "comparison_base": "3d732415a7d8e419d88abed2486cdace158204a9",
     "comparison_kind": "merge_base",
-    "head": "c26dc5c128bfd976790b50b832a860f7ddeaf18c",
-    "repository": "graphify-review-interface-rv_9xus8",
+    "head": "246c21b3c2a6a238efdd80aeb89e60c469a3de65",
+    "repository": "graphify-review-interface-zj7onzpi",
     "title": "Round totals and retire the legacy tax helper",
     "type": "git_comparison"
   },
@@ -189,6 +192,8 @@
     "code_files_changed": 1,
     "test_files_changed": 0,
     "test_gap": true,
+    "unmapped_code_file_count": 0,
+    "unmapped_code_files": [],
     "untested": [
       "rounding()"
     ]

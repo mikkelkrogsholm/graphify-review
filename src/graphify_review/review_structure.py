@@ -97,7 +97,8 @@ def _look_key(symbol: dict) -> tuple:
             CHANGE_ORDER[symbol["status"]], symbol["file"], symbol["line"] or 0, symbol["label"])
 
 
-def analyze_structure(graphs: dict, story_seeds: list[dict], changes: list[dict], depth: int) -> dict:
+def analyze_structure(graphs: dict, story_seeds: list[dict], changes: list[dict], depth: int,
+                      *, code_files: dict[str, set[str]]) -> dict:
     """``story_seeds`` items: ``{"story_id", "seeds": {"base": [...], "head": [...]}, "methods": {...}}``."""
     touched = {side: {str(n) for item in story_seeds for n in item["seeds"][side]} for side in graphs}
     found: dict[str, dict] = {}
@@ -134,7 +135,7 @@ def analyze_structure(graphs: dict, story_seeds: list[dict], changes: list[dict]
                 outside.append(hit)
         outside.sort(key=lambda d: (d["label"] == d["file"], d["depth"], d["file"], d["line"] or 0, d["label"]))
         tests = _distinct_tests(sorted(tests, key=lambda d: (d["depth"], d["file"], d["line"] or 0, d["label"])))
-        record.update(dependents=outside, tests=tests, tests_from=None)
+        record.update(dependents=outside, tests=tests, class_tests=[], tests_from=None)
         symbols.append(record)
     by_id = {s["id"]: s for s in symbols}
     for symbol in symbols:
@@ -144,7 +145,8 @@ def analyze_structure(graphs: dict, story_seeds: list[dict], changes: list[dict]
             if owner is not None:
                 owner_tests = by_id[str(owner)]["tests"] if str(owner) in by_id else _distinct_tests(
                     [h for h in _dependents(graphs["head"], str(owner), depth) if is_test_path(h["file"])])
-                symbol["tests"], symbol["tests_from"] = owner_tests, str(owner)
+                # A class dependency does not establish that any particular method runs.
+                symbol["class_tests"], symbol["tests_from"] = owner_tests[:MAX_LISTED], str(owner)
     for symbol in symbols:
         symbol["dependent_count"] = len(symbol["dependents"])
         symbol["dependent_files"] = len({d["file"] for d in symbol["dependents"]})
@@ -152,19 +154,25 @@ def analyze_structure(graphs: dict, story_seeds: list[dict], changes: list[dict]
         symbol["risk"], symbol["reasons"] = _symbol_risk(symbol)
         symbol["dependents"] = symbol["dependents"][:MAX_LISTED]
         symbol["tests"] = symbol["tests"][:MAX_LISTED]
-    code_files = {c["head_file"] or c["base_file"] for c in changes
-                  if not is_test_path(c["head_file"] or c["base_file"])
-                  and any(s["file"] in (c["head_file"], c["base_file"]) for s in symbols)}
+    code_changes = [c for c in changes if any(
+        c[f"{side}_file"] in code_files[side] and not is_test_path(c[f"{side}_file"])
+        for side in ("base", "head"))]
+    changed_code_files = {c["head_file"] or c["base_file"] for c in code_changes}
+    mapped_files = {side: {graphs[side].nodes[n]["source_file"] for n in touched[side]
+                           if n in graphs[side] and _is_symbol(graphs[side].nodes[n])}
+                    for side in ("base", "head")}
+    unmapped = sorted({c["head_file"] or c["base_file"] for c in code_changes
+                       if not any(c[f"{side}_file"] in mapped_files[side] for side in ("base", "head"))})
     test_files = {c["head_file"] for c in changes if c["head_file"] and is_test_path(c["head_file"])}
-    test_gap = bool(code_files) and not test_files
+    test_gap = bool(changed_code_files) and not test_files
     ranked = sorted((s for s in symbols if not s["is_test"]), key=_look_key)
     level, reasons = "low", []
     if ranked and RISK_ORDER[ranked[0]["risk"]]:
         level = ranked[0]["risk"]
         reasons.append(f"{ranked[0]['label']} ({', '.join(ranked[0]['reasons'])})")
-    size = "high" if len(code_files) >= HIGH_CODE_FILES else "medium" if len(code_files) >= MEDIUM_CODE_FILES else "low"
+    size = "high" if len(changed_code_files) >= HIGH_CODE_FILES else "medium" if len(changed_code_files) >= MEDIUM_CODE_FILES else "low"
     if size != "low":
-        reasons.append(f"{_plural(len(code_files), 'code file')} changed")
+        reasons.append(f"{_plural(len(changed_code_files), 'code file')} changed")
         level = max(level, size, key=RISK_ORDER.__getitem__)
     if test_gap:
         reasons.append("code changed without any test changes")
@@ -172,14 +180,18 @@ def analyze_structure(graphs: dict, story_seeds: list[dict], changes: list[dict]
     if omitted:
         reasons.append(f"{omitted} more changed symbols were not analysed, so risk may be understated")
         level = max(level, "medium", key=RISK_ORDER.__getitem__)
+    if unmapped:
+        reasons.append(f"{_plural(len(unmapped), 'changed code file')} without mapped symbols; test reachability is unknown")
+        level = max(level, "medium", key=RISK_ORDER.__getitem__)
     names = Counter(s["label"] for s in symbols)
     untested = sorted({s["label"] if names[s["label"]] == 1 else f"{s['label']} in {s['file']}"
                        for s in symbols if not s["is_test"] and s["status"] != "removed" and not s["tests"]})
     symbols.sort(key=_look_key)
     return {"method": "structural_heuristic", "symbols": symbols, "omitted_symbols": omitted,
             "risk": {"level": level, "reasons": reasons},
-            "tests": {"code_files_changed": len(code_files), "test_files_changed": len(test_files),
-                      "test_gap": test_gap, "untested": untested},
+            "tests": {"code_files_changed": len(changed_code_files), "test_files_changed": len(test_files),
+                      "test_gap": test_gap, "untested": untested,
+                      "unmapped_code_file_count": len(unmapped), "unmapped_code_files": unmapped[:MAX_LISTED]},
             "look_first": [s["id"] for s in ranked[:MAX_LOOK_FIRST]]}
 
 

@@ -90,7 +90,7 @@ def test_code_changed_without_tests_is_flagged(structured):
     assert "code changed without any test changes" in structured["structure"]["risk"]["reasons"]
 
 
-def test_methods_borrow_their_classs_tests(tmp_path):
+def test_methods_offer_class_tests_as_hints_without_claiming_reachability(tmp_path):
     git(tmp_path, "init", "-q")
     git(tmp_path, "config", "user.name", "t")
     git(tmp_path, "config", "user.email", "t@example.invalid")
@@ -106,8 +106,69 @@ def test_methods_borrow_their_classs_tests(tmp_path):
     git(tmp_path, "commit", "-qm", "head")
     model = review.build_review(tmp_path, git_target(tmp_path, base, git(tmp_path, "rev-parse", "HEAD")))
     add = next(s for s in model["structure"]["symbols"] if s["label"].endswith("add()"))
-    assert add["tests"] and add["tests_from"]
-    assert model["structure"]["tests"]["untested"] == []
+    assert add["class_tests"] and add["tests_from"]
+    assert add["tests"] == [] and add["test_count"] == 0
+    assert model["structure"]["tests"]["untested"] == ["Calc.add()"]
+
+
+def test_a_sibling_methods_test_does_not_cover_a_changed_method(tmp_path):
+    from graphify_review.review_documents import facts_document
+    from graphify_review.review_html import render_review
+    from tests.helpers import make_repo
+
+    calc = "class Calc:\n    def add(self, a, b):\n        return a + b\n    def divide(self, a, b):\n        return a / b\n"
+    test = "from calc import Calc\ndef test_add():\n    assert Calc().add(1, 2) == 3\n"
+    root, base, head = make_repo(tmp_path, {"calc.py": calc, "tests/test_calc.py": test},
+                               {"calc.py": calc.replace("a / b", "a // b"), "tests/test_calc.py": test})
+    model = review.build_review(root, git_target(root, base, head))
+    divide = by_label(model, "Calc.divide()")
+    assert divide["tests"] == [] and divide["test_count"] == 0
+    assert [t["label"] for t in divide["class_tests"]] == ["test_add()"]
+    assert "no test reaches it" in divide["reasons"]
+    facts = facts_document(model)
+    assert facts["counts"]["tests_reaching"] == 0
+    assert facts["tests"]["untested"] == ["Calc.divide()"]
+    assert facts["symbols"][0]["class_tests"]
+    page = render_review(model)
+    assert "Class-level test hints" in page and "method reachability is unknown" in page
+    assert "Every changed symbol is reached by a test" not in page
+
+
+@pytest.mark.parametrize("change_test", [False, True])
+def test_constant_changes_count_as_code_with_unknown_test_reachability(tmp_path, change_test):
+    from graphify_review.review_documents import facts_document
+    from graphify_review.review_html import render_review
+    from tests.helpers import make_repo
+
+    before = {"policy.py": "ALLOW_ALL = False\n", "tests/test_policy.py": "def test_policy():\n    pass\n"}
+    after = {**before, "policy.py": "ALLOW_ALL = True\n"}
+    if change_test:
+        after["tests/test_policy.py"] += "\n# A test change does not establish coverage.\n"
+    root, base, head = make_repo(tmp_path, before, after)
+    model = review.build_review(root, git_target(root, base, head))
+    facts = facts_document(model)
+    assert facts["tests"]["code_files_changed"] == 1
+    assert facts["tests"]["test_gap"] is (not change_test)
+    assert facts["tests"]["unmapped_code_files"] == ["policy.py"]
+    assert facts["tests"]["unmapped_code_file_count"] == 1
+    assert facts["risk"]["level"] == "medium"
+    page = render_review(model)
+    assert "test reachability is unknown" in page
+    assert "Every changed symbol is reached by a test" not in page
+
+
+def test_changed_file_counts_do_not_depend_on_the_symbol_budget(tmp_path, monkeypatch):
+    from graphify_review import review_structure
+    from tests.helpers import make_repo
+
+    before = {f"module_{i}.py": f"def f_{i}():\n    return 1\n" for i in range(25)}
+    after = {name: text.replace("return 1", "return 2") for name, text in before.items()}
+    root, base, head = make_repo(tmp_path, before, after)
+    monkeypatch.setattr(review_structure, "MAX_SYMBOLS", 1)
+    model = review.build_review(root, git_target(root, base, head))
+    assert model["structure"]["tests"]["code_files_changed"] == 25
+    assert model["structure"]["risk"]["level"] == "high"
+    assert model["structure"]["omitted_symbols"] == 24
 
 
 def test_structure_is_deterministic(structured_repository):
@@ -135,5 +196,6 @@ def test_omitted_symbols_raise_a_low_risk_to_medium():
     graph.add_node("n", label="f()", source_file="a.py", source_location="L1", file_type="code")
     result = analyze_structure({"base": graph, "head": graph},
                                [{"story_id": "change-1", "seeds": {"base": [], "head": ["n"]}, "methods": {"base": "x", "head": "x"}}],
-                               [{"head_file": "tests/test_a.py", "base_file": "tests/test_a.py"}], 2)
+                               [{"head_file": "tests/test_a.py", "base_file": "tests/test_a.py"}], 2,
+                               code_files={"base": {"a.py"}, "head": {"a.py"}})
     assert result["omitted_symbols"] == 0 and result["risk"]["level"] in ("low", "medium")

@@ -104,6 +104,17 @@ def test_private_key_without_end_or_header_is_still_redacted():
     assert redactor.text("A" * 64 + "\nordinary line") == "A" * 64 + "\nordinary line"  # a single line is kept
 
 
+@pytest.mark.parametrize("prefix", ["-", "+", " "])
+@pytest.mark.parametrize("width", [64, 76])
+def test_body_only_private_keys_are_redacted_in_patches(prefix, width):
+    body = "\n".join(prefix + letter * width for letter in "ABC")
+    value = {"source": {"patch": "@@ -20,3 +20,3 @@\n" + body}}
+    output = Redactor().walk(value)["source"]["patch"]
+    assert not any(letter * width in output for letter in "ABC")
+    assert output.split("\n")[1:] == [prefix + "[redacted: private key]"] * 3
+    assert output.count("\n") == 3
+
+
 def test_environment_values_are_not_read_unless_asked(monkeypatch):
     monkeypatch.setenv("CREDENTIAL_HELPER", "development-value")
     assert Redactor().text("development-value") == "development-value"

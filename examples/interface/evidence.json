@@ -63,7 +63,7 @@
           "id": "change-1-base-0",
           "line_end": 5,
           "line_start": 1,
-          "revision": "cbaf49718fe736deeeb1b69d010fc2d11f7060d9",
+          "revision": "3d732415a7d8e419d88abed2486cdace158204a9",
           "side": "base",
           "snippet": "def legacy_tax(amount):\n    return amount * 0.2\n\ndef total(items):\n    return sum(items)",
           "source_file": "billing.py",
@@ -73,7 +73,7 @@
           "id": "change-1-head-0",
           "line_end": 5,
           "line_start": 1,
-          "revision": "c26dc5c128bfd976790b50b832a860f7ddeaf18c",
+          "revision": "246c21b3c2a6a238efdd80aeb89e60c469a3de65",
           "side": "head",
           "snippet": "def total(items):\n    return round(sum(items), 2)\n\ndef rounding(value):\n    return round(value, 2)",
           "source_file": "billing.py",
@@ -99,6 +99,7 @@
   ],
   "symbols": [
     {
+      "class_tests": [],
       "dependent_count": 2,
       "dependent_files": 1,
       "dependents": [
@@ -137,6 +138,7 @@
       "tests_from": null
     },
     {
+      "class_tests": [],
       "dependent_count": 3,
       "dependent_files": 1,
       "dependents": [
@@ -192,6 +194,7 @@
       "tests_from": null
     },
     {
+      "class_tests": [],
       "dependent_count": 0,
       "dependent_files": 0,
       "dependents": [],
@@ -214,11 +217,11 @@
     }
   ],
   "target": {
-    "base_tip": "cbaf49718fe736deeeb1b69d010fc2d11f7060d9",
-    "comparison_base": "cbaf49718fe736deeeb1b69d010fc2d11f7060d9",
+    "base_tip": "3d732415a7d8e419d88abed2486cdace158204a9",
+    "comparison_base": "3d732415a7d8e419d88abed2486cdace158204a9",
     "comparison_kind": "merge_base",
-    "head": "c26dc5c128bfd976790b50b832a860f7ddeaf18c",
-    "repository": "graphify-review-interface-rv_9xus8",
+    "head": "246c21b3c2a6a238efdd80aeb89e60c469a3de65",
+    "repository": "graphify-review-interface-zj7onzpi",
     "title": "Round totals and retire the legacy tax helper",
     "type": "git_comparison"
   },

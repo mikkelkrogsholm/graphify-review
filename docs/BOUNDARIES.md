@@ -1,0 +1,14 @@
+# Boundaries and limits
+
+- Comparisons retain fixed base-tip, merge-base, and head IDs. A shallow clone with an unavailable merge base needs more history before reviewing.
+- PR review requires authenticated `gh` and a checkout of that repository. Local Git comparisons require neither GitHub nor a model. Git object retrieval does not switch the worktree or index.
+- Corpus boundaries reuse Graphify's detection/ignore rules. Sensitive, ignored, binary/non-UTF-8, symlink/gitlink, and nonportable sources are omitted and disclosed. Tracked files remain tracked despite Git-only ignore rules.
+- Each snapshot admits at most 5,000 regular files, 64 MB total, and 1 MB per source. Metadata is capped at 16 MB / 100,000 paths. Ignore and marker data have separate bounded budgets and unreadable ignore rules fail closed.
+- Reviews retain at most 500 changed-file stories. Excerpts retain at most 24 hunks per file and 100 physical LF lines per excerpt. Expensive diff matching uses a disclosed linear fallback.
+- Python symbol mapping uses actual AST spans including decorators. Unsupported mapping falls back explicitly to changed-file membership. Graphify's extractor and relation-collapse limitations remain.
+- Focused graphs show at most 12 nodes. Blast-radius traversal uses at most 100 seeds and depth 0–6; omitted records remain visible. Structural impact is potential dependency, not a prediction of defects or proof of execution order. Community IDs are local to each snapshot.
+- Temporary-path IDs are excluded from structural comparison and counted. Unknown extraction diagnostics remain visible coverage gaps without fabricated source citations.
+- Pseudocode is always inferred. Supplied citation IDs and source-side support are validated, while semantic correctness still needs human review. Inference is bounded to 24 stories and 60,000 input characters; provider failures preserve structural artifacts.
+- Output files are privately staged and individually replaced with recovery on reported errors. Static symlink paths are rejected. A hostile concurrent process can still replace directory ancestors: use trusted local output trees, and do not run elevated in attacker-writable directories. A crash or concurrent writer can interrupt the JSON/HTML pair; the HTML records its model digest.
+- Graphify 0.9.92 is the supported integration for this release. A version mismatch fails with an actionable message. Additional Graphify versions require compatibility verification here.
+- Windows is included in CI; local Windows execution and live provider calls must be reported as unverified until exercised. A mocked demonstration is visibly marked as authored pseudocode.

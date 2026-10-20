@@ -1,0 +1,730 @@
+{
+  "version": 1,
+  "target": {
+    "type": "git_comparison",
+    "title": "Require an MFA challenge before creating a session",
+    "base_tip": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+    "comparison_base": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+    "head": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+    "comparison_kind": "merge_base",
+    "repository": "graphify-review-example-tysgi6tr"
+  },
+  "coverage": {
+    "base": {
+      "source_files": 2,
+      "code_files": 2,
+      "failed_sources": [],
+      "unmapped_failed_sources": 0,
+      "path_dependent_nodes": 0,
+      "path_dependent_sources": [],
+      "omitted_files": [],
+      "nodes": 5,
+      "edges": 7
+    },
+    "head": {
+      "source_files": 2,
+      "code_files": 2,
+      "failed_sources": [],
+      "unmapped_failed_sources": 0,
+      "path_dependent_nodes": 0,
+      "path_dependent_sources": [],
+      "omitted_files": [],
+      "nodes": 6,
+      "edges": 9
+    }
+  },
+  "graph_diff": {
+    "new_nodes": [
+      {
+        "id": "auth_challenge",
+        "label": "challenge()",
+        "source_file": "auth.py",
+        "source_location": "L6",
+        "file_type": "code"
+      }
+    ],
+    "removed_nodes": [],
+    "new_edges": [
+      {
+        "source": "auth",
+        "target": "auth_challenge",
+        "relation": "contains",
+        "confidence": "EXTRACTED",
+        "source_file": "auth.py",
+        "source_location": "L6"
+      },
+      {
+        "source": "auth_authenticate",
+        "target": "auth_challenge",
+        "relation": "calls",
+        "confidence": "EXTRACTED",
+        "source_file": "auth.py",
+        "source_location": "L3",
+        "context": "call"
+      }
+    ],
+    "removed_edges": [],
+    "summary": "1 new node, 2 new edges"
+  },
+  "omitted_graph_records": {
+    "new_nodes": 0,
+    "removed_nodes": 0,
+    "new_edges": 0,
+    "removed_edges": 0
+  },
+  "stories": [
+    {
+      "id": "change-1",
+      "title": "auth.py",
+      "change": {
+        "status": "M",
+        "base_mode": "100644",
+        "head_mode": "100644",
+        "base_object": "af88e769514a17c1c9c3ec1a3372049c297951cd",
+        "head_object": "278332bfb2c5ee2bfc2f34ee06d3e134847b1ab2",
+        "base_file": "auth.py",
+        "head_file": "auth.py"
+      },
+      "evidence_ids": [
+        "change-1-base-0",
+        "change-1-head-0"
+      ],
+      "source": {
+        "sides": {
+          "base": "available",
+          "head": "available"
+        },
+        "hunks": 1,
+        "omitted_hunks": 0,
+        "diff_limited": false,
+        "diff_method": "line_diff",
+        "source_format": {
+          "base": {
+            "final_newline": true,
+            "crlf_lines": 0
+          },
+          "head": {
+            "final_newline": true,
+            "crlf_lines": 0
+          }
+        },
+        "patch": "--- auth.py\n+++ auth.py\n@@ -1,5 +1,10 @@\n def authenticate(credentials):\n+    if credentials.get('mfa'):\n+        return challenge(credentials)\n     return create_session(credentials)\n+\n+def challenge(credentials):\n+    return 'challenge'\n \n def create_session(credentials):\n     return credentials",
+        "patch_truncated": false,
+        "changed_ranges": {
+          "base": [
+            [
+              2,
+              2
+            ],
+            [
+              3,
+              3
+            ]
+          ],
+          "head": [
+            [
+              2,
+              3
+            ],
+            [
+              5,
+              7
+            ]
+          ]
+        }
+      },
+      "seed_methods": {
+        "base": "python_ast_span",
+        "head": "python_ast_span"
+      },
+      "graphs": {
+        "node_order": [
+          "app",
+          "app_login",
+          "auth_authenticate",
+          "auth_challenge",
+          "auth_create_session"
+        ],
+        "seed_count": 2,
+        "omitted_candidates": 0,
+        "base": {
+          "nodes": [
+            {
+              "id": "app",
+              "label": "app.py",
+              "source_file": "app.py",
+              "source_location": "L1",
+              "file_type": "code",
+              "evidence_id": "source-9dbe54032a57ac44"
+            },
+            {
+              "id": "app_login",
+              "label": "login()",
+              "source_file": "app.py",
+              "source_location": "L3",
+              "file_type": "code",
+              "evidence_id": "source-ef6dc636fab6f897"
+            },
+            {
+              "id": "auth_authenticate",
+              "label": "authenticate()",
+              "source_file": "auth.py",
+              "source_location": "L1",
+              "file_type": "code",
+              "evidence_id": "change-1-base-0"
+            },
+            {
+              "id": "auth_create_session",
+              "label": "create_session()",
+              "source_file": "auth.py",
+              "source_location": "L4",
+              "file_type": "code",
+              "evidence_id": "source-06077375e7f7f8e1"
+            }
+          ],
+          "edges": [
+            {
+              "source": "app",
+              "target": "auth_authenticate",
+              "relation": "imports",
+              "confidence": "EXTRACTED",
+              "source_file": "app.py",
+              "source_location": "L1",
+              "context": "import",
+              "evidence_id": "source-9dbe54032a57ac44"
+            },
+            {
+              "source": "app_login",
+              "target": "auth_authenticate",
+              "relation": "calls",
+              "confidence": "EXTRACTED",
+              "source_file": "app.py",
+              "source_location": "L4",
+              "context": "call",
+              "evidence_id": "source-fc6eb35c6af041d4"
+            },
+            {
+              "source": "auth_authenticate",
+              "target": "auth_create_session",
+              "relation": "calls",
+              "confidence": "EXTRACTED",
+              "source_file": "auth.py",
+              "source_location": "L2",
+              "context": "call",
+              "evidence_id": "source-64c034e6d5f1e0e1"
+            }
+          ]
+        },
+        "head": {
+          "nodes": [
+            {
+              "id": "app",
+              "label": "app.py",
+              "source_file": "app.py",
+              "source_location": "L1",
+              "file_type": "code",
+              "evidence_id": "source-b24cb351625ead30"
+            },
+            {
+              "id": "app_login",
+              "label": "login()",
+              "source_file": "app.py",
+              "source_location": "L3",
+              "file_type": "code",
+              "evidence_id": "source-78cad8873055a7cb"
+            },
+            {
+              "id": "auth_authenticate",
+              "label": "authenticate()",
+              "source_file": "auth.py",
+              "source_location": "L1",
+              "file_type": "code",
+              "evidence_id": "change-1-head-0"
+            },
+            {
+              "id": "auth_challenge",
+              "label": "challenge()",
+              "source_file": "auth.py",
+              "source_location": "L6",
+              "file_type": "code",
+              "evidence_id": "source-c703ab4eee8e7a0b"
+            },
+            {
+              "id": "auth_create_session",
+              "label": "create_session()",
+              "source_file": "auth.py",
+              "source_location": "L9",
+              "file_type": "code",
+              "evidence_id": "source-b6c595aa8cf44144"
+            }
+          ],
+          "edges": [
+            {
+              "source": "app",
+              "target": "auth_authenticate",
+              "relation": "imports",
+              "confidence": "EXTRACTED",
+              "source_file": "app.py",
+              "source_location": "L1",
+              "context": "import",
+              "evidence_id": "source-b24cb351625ead30"
+            },
+            {
+              "source": "app_login",
+              "target": "auth_authenticate",
+              "relation": "calls",
+              "confidence": "EXTRACTED",
+              "source_file": "app.py",
+              "source_location": "L4",
+              "context": "call",
+              "evidence_id": "source-31ca10285eca5610"
+            },
+            {
+              "source": "auth_authenticate",
+              "target": "auth_challenge",
+              "relation": "calls",
+              "confidence": "EXTRACTED",
+              "source_file": "auth.py",
+              "source_location": "L3",
+              "context": "call",
+              "evidence_id": "source-f387138eac9d8456"
+            },
+            {
+              "source": "auth_authenticate",
+              "target": "auth_create_session",
+              "relation": "calls",
+              "confidence": "EXTRACTED",
+              "source_file": "auth.py",
+              "source_location": "L4",
+              "context": "call",
+              "evidence_id": "source-05694e42d140d2f6"
+            }
+          ]
+        }
+      },
+      "behavior": {
+        "summary": "MFA credentials return a challenge before creating a session.",
+        "before_pseudocode": "When signing in:\n    Create a session\n    Return the session",
+        "after_pseudocode": "When signing in:\n    If MFA is required:\n        Return an MFA challenge\n    Otherwise:\n        Create and return a session",
+        "evidence_ids": [
+          "change-1-base-0",
+          "change-1-head-0"
+        ],
+        "confidence": "INFERRED",
+        "method": "model_interpretation",
+        "uncertainties": []
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "change-1-base-0",
+      "kind": "source_diff",
+      "side": "base",
+      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "source_file": "auth.py",
+      "line_start": 1,
+      "line_end": 5,
+      "snippet": "def authenticate(credentials):\n    return create_session(credentials)\n\ndef create_session(credentials):\n    return credentials",
+      "truncated": false
+    },
+    {
+      "id": "change-1-head-0",
+      "kind": "source_diff",
+      "side": "head",
+      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "source_file": "auth.py",
+      "line_start": 1,
+      "line_end": 10,
+      "snippet": "def authenticate(credentials):\n    if credentials.get('mfa'):\n        return challenge(credentials)\n    return create_session(credentials)\n\ndef challenge(credentials):\n    return 'challenge'\n\ndef create_session(credentials):\n    return credentials",
+      "truncated": false
+    },
+    {
+      "id": "source-9dbe54032a57ac44",
+      "kind": "graph_source",
+      "side": "base",
+      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "source_file": "app.py",
+      "line_start": 1,
+      "line_end": 4,
+      "snippet": "from auth import authenticate\n\ndef login(credentials):\n    return authenticate(credentials)"
+    },
+    {
+      "id": "source-ef6dc636fab6f897",
+      "kind": "graph_source",
+      "side": "base",
+      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "source_file": "app.py",
+      "line_start": 3,
+      "line_end": 4,
+      "snippet": "def login(credentials):\n    return authenticate(credentials)"
+    },
+    {
+      "id": "source-06077375e7f7f8e1",
+      "kind": "graph_source",
+      "side": "base",
+      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "source_file": "auth.py",
+      "line_start": 4,
+      "line_end": 5,
+      "snippet": "def create_session(credentials):\n    return credentials"
+    },
+    {
+      "id": "source-fc6eb35c6af041d4",
+      "kind": "graph_source",
+      "side": "base",
+      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "source_file": "app.py",
+      "line_start": 4,
+      "line_end": 4,
+      "snippet": "    return authenticate(credentials)"
+    },
+    {
+      "id": "source-64c034e6d5f1e0e1",
+      "kind": "graph_source",
+      "side": "base",
+      "revision": "c2b88daacc4ed1e117e53bd862ca8163fa4215a4",
+      "source_file": "auth.py",
+      "line_start": 2,
+      "line_end": 5,
+      "snippet": "    return create_session(credentials)\n\ndef create_session(credentials):\n    return credentials"
+    },
+    {
+      "id": "source-b24cb351625ead30",
+      "kind": "graph_source",
+      "side": "head",
+      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "source_file": "app.py",
+      "line_start": 1,
+      "line_end": 4,
+      "snippet": "from auth import authenticate\n\ndef login(credentials):\n    return authenticate(credentials)"
+    },
+    {
+      "id": "source-78cad8873055a7cb",
+      "kind": "graph_source",
+      "side": "head",
+      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "source_file": "app.py",
+      "line_start": 3,
+      "line_end": 4,
+      "snippet": "def login(credentials):\n    return authenticate(credentials)"
+    },
+    {
+      "id": "source-c703ab4eee8e7a0b",
+      "kind": "graph_source",
+      "side": "head",
+      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "source_file": "auth.py",
+      "line_start": 6,
+      "line_end": 10,
+      "snippet": "def challenge(credentials):\n    return 'challenge'\n\ndef create_session(credentials):\n    return credentials"
+    },
+    {
+      "id": "source-b6c595aa8cf44144",
+      "kind": "graph_source",
+      "side": "head",
+      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "source_file": "auth.py",
+      "line_start": 9,
+      "line_end": 10,
+      "snippet": "def create_session(credentials):\n    return credentials"
+    },
+    {
+      "id": "source-31ca10285eca5610",
+      "kind": "graph_source",
+      "side": "head",
+      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "source_file": "app.py",
+      "line_start": 4,
+      "line_end": 4,
+      "snippet": "    return authenticate(credentials)"
+    },
+    {
+      "id": "source-f387138eac9d8456",
+      "kind": "graph_source",
+      "side": "head",
+      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "source_file": "auth.py",
+      "line_start": 3,
+      "line_end": 8,
+      "snippet": "        return challenge(credentials)\n    return create_session(credentials)\n\ndef challenge(credentials):\n    return 'challenge'\n"
+    },
+    {
+      "id": "source-05694e42d140d2f6",
+      "kind": "graph_source",
+      "side": "head",
+      "revision": "f74e74caf5664020338de6a4f2a41d3d19d70b22",
+      "source_file": "auth.py",
+      "line_start": 4,
+      "line_end": 9,
+      "snippet": "    return create_session(credentials)\n\ndef challenge(credentials):\n    return 'challenge'\n\ndef create_session(credentials):"
+    }
+  ],
+  "blast_radius": {
+    "base": {
+      "direct_ids": [
+        "auth_authenticate"
+      ],
+      "indirect": [
+        {
+          "id": "app",
+          "depth": 1,
+          "via_relation": "imports",
+          "via_file": "app.py",
+          "via_location": "L1"
+        },
+        {
+          "id": "app_login",
+          "depth": 1,
+          "via_relation": "calls",
+          "via_file": "app.py",
+          "via_location": "L4"
+        }
+      ],
+      "direct_count": 1,
+      "indirect_count": 2,
+      "depth": 2,
+      "relations": [
+        "calls",
+        "indirect_call",
+        "references",
+        "imports",
+        "imports_from",
+        "dynamic_import",
+        "re_exports",
+        "inherits",
+        "extends",
+        "implements",
+        "uses",
+        "mixes_in",
+        "embeds",
+        "defines",
+        "requires"
+      ],
+      "omitted_seeds": 0,
+      "omitted_direct": 0,
+      "omitted_indirect": 0,
+      "communities": [
+        {
+          "id": 0,
+          "label": "app.py / auth.py",
+          "total_nodes": 3,
+          "affected_nodes": 3
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "app",
+            "label": "app.py",
+            "source_file": "app.py",
+            "source_location": "L1",
+            "file_type": "code",
+            "depth": 1,
+            "community": 0,
+            "evidence_id": "source-9dbe54032a57ac44"
+          },
+          {
+            "id": "app_login",
+            "label": "login()",
+            "source_file": "app.py",
+            "source_location": "L3",
+            "file_type": "code",
+            "depth": 1,
+            "community": 0,
+            "evidence_id": "source-ef6dc636fab6f897"
+          },
+          {
+            "id": "auth_authenticate",
+            "label": "authenticate()",
+            "source_file": "auth.py",
+            "source_location": "L1",
+            "file_type": "code",
+            "depth": 0,
+            "community": 0,
+            "evidence_id": "change-1-base-0"
+          }
+        ],
+        "edges": [
+          {
+            "source": "app",
+            "target": "auth_authenticate",
+            "relation": "imports",
+            "confidence": "EXTRACTED",
+            "source_file": "app.py",
+            "source_location": "L1",
+            "context": "import",
+            "evidence_id": "source-9dbe54032a57ac44"
+          },
+          {
+            "source": "app_login",
+            "target": "auth_authenticate",
+            "relation": "calls",
+            "confidence": "EXTRACTED",
+            "source_file": "app.py",
+            "source_location": "L4",
+            "context": "call",
+            "evidence_id": "source-fc6eb35c6af041d4"
+          }
+        ],
+        "omitted_nodes": 0
+      }
+    },
+    "head": {
+      "direct_ids": [
+        "auth_authenticate",
+        "auth_challenge"
+      ],
+      "indirect": [
+        {
+          "id": "app",
+          "depth": 1,
+          "via_relation": "imports",
+          "via_file": "app.py",
+          "via_location": "L1"
+        },
+        {
+          "id": "app_login",
+          "depth": 1,
+          "via_relation": "calls",
+          "via_file": "app.py",
+          "via_location": "L4"
+        }
+      ],
+      "direct_count": 2,
+      "indirect_count": 2,
+      "depth": 2,
+      "relations": [
+        "calls",
+        "indirect_call",
+        "references",
+        "imports",
+        "imports_from",
+        "dynamic_import",
+        "re_exports",
+        "inherits",
+        "extends",
+        "implements",
+        "uses",
+        "mixes_in",
+        "embeds",
+        "defines",
+        "requires"
+      ],
+      "omitted_seeds": 0,
+      "omitted_direct": 0,
+      "omitted_indirect": 0,
+      "communities": [
+        {
+          "id": 0,
+          "label": "auth.py",
+          "total_nodes": 4,
+          "affected_nodes": 2
+        },
+        {
+          "id": 1,
+          "label": "app.py",
+          "total_nodes": 2,
+          "affected_nodes": 2
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "app",
+            "label": "app.py",
+            "source_file": "app.py",
+            "source_location": "L1",
+            "file_type": "code",
+            "depth": 1,
+            "community": 1,
+            "evidence_id": "source-b24cb351625ead30"
+          },
+          {
+            "id": "app_login",
+            "label": "login()",
+            "source_file": "app.py",
+            "source_location": "L3",
+            "file_type": "code",
+            "depth": 1,
+            "community": 1,
+            "evidence_id": "source-78cad8873055a7cb"
+          },
+          {
+            "id": "auth_authenticate",
+            "label": "authenticate()",
+            "source_file": "auth.py",
+            "source_location": "L1",
+            "file_type": "code",
+            "depth": 0,
+            "community": 0,
+            "evidence_id": "change-1-head-0"
+          },
+          {
+            "id": "auth_challenge",
+            "label": "challenge()",
+            "source_file": "auth.py",
+            "source_location": "L6",
+            "file_type": "code",
+            "depth": 0,
+            "community": 0,
+            "evidence_id": "source-c703ab4eee8e7a0b"
+          }
+        ],
+        "edges": [
+          {
+            "source": "app",
+            "target": "auth_authenticate",
+            "relation": "imports",
+            "confidence": "EXTRACTED",
+            "source_file": "app.py",
+            "source_location": "L1",
+            "context": "import",
+            "evidence_id": "source-b24cb351625ead30"
+          },
+          {
+            "source": "app_login",
+            "target": "auth_authenticate",
+            "relation": "calls",
+            "confidence": "EXTRACTED",
+            "source_file": "app.py",
+            "source_location": "L4",
+            "context": "call",
+            "evidence_id": "source-31ca10285eca5610"
+          },
+          {
+            "source": "auth_authenticate",
+            "target": "auth_challenge",
+            "relation": "calls",
+            "confidence": "EXTRACTED",
+            "source_file": "auth.py",
+            "source_location": "L3",
+            "context": "call",
+            "evidence_id": "source-f387138eac9d8456"
+          }
+        ],
+        "omitted_nodes": 0
+      }
+    }
+  },
+  "behavior_analysis": {
+    "status": "complete",
+    "usage": {},
+    "backend": "ollama",
+    "model": "authored-demonstration",
+    "stories_in_context": 1,
+    "omitted_stories": 0,
+    "accepted": 1,
+    "rejected": 0,
+    "unexplained_stories": 0,
+    "illustrative": true
+  },
+  "limitations": [
+    "Dependency graphs describe structural relationships, not execution order or predicted failures.",
+    "Graph comparison follows Graphify's current builder; parallel relations can collapse.",
+    "Records whose identities contain the temporary snapshot path are excluded and counted in coverage.",
+    "Community IDs are local to each snapshot. Dynamic dispatch and unsupported languages limit coverage."
+  ],
+  "changed_file_count": 1,
+  "omitted_change_stories": 0
+}

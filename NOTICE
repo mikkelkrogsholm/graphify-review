@@ -1,0 +1,10 @@
+Graphify Review
+Copyright 2026 Mikkel Freltoft Krogsholm and contributors.
+
+Review artifact implementation adapted from the author's Graphify contribution,
+https://github.com/Graphify-Labs/graphify/pull/3958 (commit ebc01b8).
+
+Graphify, used as a dependency:
+Copyright 2026 Safi Shamsi and the Graphify contributors.
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+Portions contributed under the MIT License retain those terms (LICENSE-MIT).

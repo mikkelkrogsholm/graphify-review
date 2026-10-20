@@ -16,11 +16,14 @@ import networkx as nx
 from graphify_review.graphify_adapter import (
     DEFAULT_AFFECTED_RELATIONS, FileType, affected_nodes, build_from_json,
     classify_file, cluster, extract, graph_diff, inference_api,
-    os_replace_with_fallback, write_text_atomic,
+    os_replace_with_fallback, require_supported_graphify, write_text_atomic,
 )
+from graphify_review.redaction import Redactor
 from graphify_review.review_source import (
     ReviewError, changed_files, file_evidence, materialize_snapshot, repository_root, source_lines,
 )
+from graphify_review.review_structure import analyze_structure
+from graphify_review.textsafe import clean, clip, strip_controls
 
 MAX_GRAPH_NODES = 12
 MAX_SEEDS = 100
@@ -30,6 +33,10 @@ MAX_INFERENCE_CHARS = 60000
 MAX_CHANGE_STORIES = 500
 MAX_BEHAVIOR_STORIES = 24
 CONFIDENCE = {"EXTRACTED", "INFERRED", "AMBIGUOUS"}
+BEHAVIOR_METHODS = {"model_interpretation", "external_narration"}
+CHECK_STATUSES = ("ok", "fail", "skipped")
+SAFETY_LEVELS = ("safe", "mostly", "careful", "unsafe")
+MAX_CHECKS = 12
 
 
 def _location_line(location: str) -> int | None:
@@ -244,11 +251,18 @@ def _blast_graph(graph: nx.DiGraph, radius: dict) -> dict:
 
 
 def build_review(root: Path, target: dict, *, depth: int = 2, infer: bool = False,
-                 backend: str | None = None, model: str | None = None) -> dict:
+                 backend: str | None = None, model: str | None = None,
+                 title: str | None = None, redact: bool = True, redact_env: bool = False) -> dict:
     """Build an isolated review from fixed commits; optionally interpret evidence."""
     root = repository_root(root)
     if not 0 <= depth <= 6:
         raise ReviewError("Blast-radius depth must be between 0 and 6.")
+    target = dict(target)
+    if title is not None:
+        target["title"] = title
+    target["title"] = clean(target.get("title"), 300) or "Review"
+    if target.get("description"):
+        target["description"] = clean(target["description"], 12000, multiline=True)
     for key in ("comparison_base", "head"):
         if not re.fullmatch(r"[a-f0-9]{40,64}", target.get(key, "")):
             raise ReviewError("Review builder requires fixed comparison-base/head commit IDs.")
@@ -270,17 +284,22 @@ def build_review(root: Path, target: dict, *, depth: int = 2, infer: bool = Fals
             delta[field] = [(_node(graphs[side], v["id"]) if "id" in v else
                              _edge(v["source"], v["target"], graphs[side].get_edge_data(v["source"], v["target"])))
                             for v in values[:MAX_RECORDS]]
-        result = {"version": 1, "target": dict(target), "coverage": coverage,
+        result = {"version": 2, "target": dict(target), "coverage": coverage,
+                  "engine": {"graphify": require_supported_graphify()},
                   "graph_diff": delta, "omitted_graph_records": omitted_records,
                   "stories": [], "evidence": [], "blast_radius": {},
                   "behavior_analysis": {"status": "not_requested"},
+                  "checks": [], "narration": None,
                   "limitations": [
                       "Dependency graphs describe structural relationships, not execution order or predicted failures.",
                       "Graph comparison follows Graphify's current builder; parallel relations can collapse.",
                       "Records whose identities contain the temporary snapshot path are excluded and counted in coverage.",
                       "Community IDs are local to each snapshot. Dynamic dispatch and unsupported languages limit coverage.",
+                      "Risk is a structural heuristic from dependents, tests and change size; it does not predict defects.",
+                      "Test links follow dependency edges; a test that reaches code dynamically is not seen.",
                   ]}
         seeds = {"base": [], "head": []}
+        story_seeds = []
         changes = changed_files(root, target["comparison_base"], target["head"])
         result["changed_file_count"] = len(changes)
         result["omitted_change_stories"] = max(0, len(changes) - MAX_CHANGE_STORIES)
@@ -293,6 +312,7 @@ def build_review(root: Path, target: dict, *, depth: int = 2, infer: bool = Fals
                     graphs[side], change[f"{side}_file"],
                     snapshots[side]["sources"].get(change[f"{side}_file"]), source["changed_ranges"][side])
                 seeds[side].extend(local_seeds[side])
+            story_seeds.append({"story_id": story_id, "seeds": local_seeds, "methods": seed_methods})
             result["evidence"].extend(evidence)
             result["stories"].append({"id": story_id, "title": change["head_file"] or change["base_file"],
                                       "change": change, "evidence_ids": [e["id"] for e in evidence],
@@ -312,6 +332,12 @@ def build_review(root: Path, target: dict, *, depth: int = 2, infer: bool = Fals
                 record["community"] = membership.get(record["id"])
             result["blast_radius"][side] = radius
         _add_graph_evidence(result, graphs, snapshots)
+        result["structure"] = analyze_structure(graphs, story_seeds, changes[:MAX_CHANGE_STORIES], depth)
+    redactor = Redactor(os.environ if redact_env else None) if redact else None
+    if redactor:
+        result = redactor.walk(result)
+    result["redactions"] = {"enabled": redact, "environment": bool(redact and redact_env),
+                            **(redactor.summary() if redactor else {"count": 0, "kinds": {}})}
     if infer:
         infer_behavior(result, backend=backend, model=model)
     validate_review(result)
@@ -338,12 +364,10 @@ def infer_behavior(review: dict, *, backend: str | None = None, model: str | Non
         payload, used = [], 0
         for story in review["stories"]:
             evidence = [e for e in review["evidence"] if e["id"] in story["evidence_ids"]]
-            required_sides = {side for side, state in story["source"]["sides"].items() if state == "available"}
             record = {"story_id": story["id"], "file": story["title"], "sides": story["source"]["sides"],
                       "evidence": evidence, "graphs": story["graphs"]}
             cost = len(json.dumps(record, ensure_ascii=False))
-            if (not evidence or "unavailable" in story["source"]["sides"].values()
-                    or not required_sides <= {e["side"] for e in evidence}
+            if (not narratable(review, story)
                     or used + cost > MAX_INFERENCE_CHARS or len(payload) >= MAX_BEHAVIOR_STORIES):
                 continue
             payload.append(record)
@@ -373,46 +397,207 @@ def infer_behavior(review: dict, *, backend: str | None = None, model: str | Non
         entries = parsed.get("behavior_changes")
         if not isinstance(entries, list) or len(entries) > MAX_BEHAVIOR_STORIES:
             raise ReviewError("Behavior response must contain at most 24 change entries.")
-        stories = {s["id"]: s for s in review["stories"]}
         supplied = {p["story_id"] for p in payload}
-        accepted, rejected, seen = [], 0, set()
-        for entry in entries:
-            if not isinstance(entry, dict) or entry.get("story_id") not in supplied or entry["story_id"] in seen:
-                rejected += 1
-                continue
-            story = stories[entry["story_id"]]
-            ids = entry.get("evidence_ids")
-            fields = ("summary", "before_pseudocode", "after_pseudocode")
-            uncertainty = entry.get("uncertainties", [])
-            if (not all(_valid_text(entry.get(k), 6000) for k in fields)
-                    or not isinstance(ids, list) or not ids or not all(isinstance(i, str) and i in story["evidence_ids"] for i in ids)
-                    or not isinstance(uncertainty, list) or len(uncertainty) > 12
-                    or not all(_valid_text(u, 2000) for u in uncertainty)):
-                rejected += 1
-                continue
-            cited = {e["side"] for e in review["evidence"] if e["id"] in ids}
-            needed = {side for side, state in story["source"]["sides"].items() if state == "available"}
-            if not needed <= cited:
-                rejected += 1
-                continue
-            if any(state == "not_present" and entry[f"{'before' if side == 'base' else 'after'}_pseudocode"].strip().casefold() != "not present"
-                   for side, state in story["source"]["sides"].items()):
-                rejected += 1
-                continue
-            accepted.append((story, {k: entry[k] for k in (*fields, "evidence_ids")} | {
-                "confidence": "INFERRED", "method": "model_interpretation", "uncertainties": uncertainty}))
-            seen.add(story["id"])
-        for story, behavior in accepted:
-            story["behavior"] = behavior
-        unexplained = len(stories) - len(accepted)
+        accepted, rejected = accept_behavior(review, entries, supplied, "model_interpretation")
+        stories = review["stories"]
+        unexplained = len(stories) - accepted
         analysis.update(status=("partial" if rejected or unexplained else "complete") if accepted else "failed" if rejected else "abstained",
-                        accepted=len(accepted), rejected=rejected, unexplained_stories=unexplained)
+                        accepted=accepted, rejected=rejected, unexplained_stories=unexplained)
         if analysis["status"] == "partial":
             analysis["reason"] = "Some stories did not receive a usable cited behavior interpretation."
         elif analysis["status"] == "failed":
             analysis["reason"] = "All model interpretations failed schema or source-citation validation."
     except Exception as exc:
         analysis.update(status="failed", reason=f"Behavior interpretation failed ({type(exc).__name__}). Structural evidence is retained.")
+
+
+def narratable(review: dict, story: dict) -> bool:
+    """A story can be explained when both available sides have cited source excerpts."""
+    evidence = [e for e in review["evidence"] if e["id"] in story["evidence_ids"]]
+    required = {side for side, state in story["source"]["sides"].items() if state == "available"}
+    return bool(evidence) and "unavailable" not in story["source"]["sides"].values() \
+        and required <= {e["side"] for e in evidence}
+
+
+def accept_behavior(review: dict, entries: list, supplied: set[str], method: str) -> tuple[int, int]:
+    """Validate cited behavior entries against the review and attach the accepted ones.
+
+    Shared by provider inference and external narration. Returns (accepted, rejected).
+    """
+    stories = {s["id"]: s for s in review["stories"]}
+    accepted, rejected, seen = [], 0, set()
+    for entry in entries:
+        story_id = entry.get("story_id") if isinstance(entry, dict) else None
+        if not isinstance(story_id, str) or story_id not in supplied or story_id in seen:
+            rejected += 1
+            continue
+        story = stories[story_id]
+        ids = entry.get("evidence_ids")
+        fields = ("summary", "before_pseudocode", "after_pseudocode")
+        raw_uncertainty = entry.get("uncertainties", [])
+        uncertainty = ([strip_controls(u, keep_newlines=True) if isinstance(u, str) else u for u in raw_uncertainty]
+                       if isinstance(raw_uncertainty, list) else raw_uncertainty)
+        text: dict = {k: strip_controls(entry[k], keep_newlines=True) if isinstance(entry.get(k), str) else entry.get(k)
+                      for k in fields}
+        if (not all(_valid_text(text.get(k), 6000) for k in fields)
+                or not isinstance(ids, list) or not ids or not all(isinstance(i, str) and i in story["evidence_ids"] for i in ids)
+                or not isinstance(uncertainty, list) or len(uncertainty) > 12
+                or not all(_valid_text(u, 2000) for u in uncertainty)):
+            rejected += 1
+            continue
+        cited = {e["side"] for e in review["evidence"] if e["id"] in ids}
+        needed = {side for side, state in story["source"]["sides"].items() if state == "available"}
+        if not needed <= cited:
+            rejected += 1
+            continue
+        if any(state == "not_present" and str(text[f"{'before' if side == 'base' else 'after'}_pseudocode"]).strip().casefold() != "not present"
+               for side, state in story["source"]["sides"].items()):
+            rejected += 1
+            continue
+        accepted.append((story, {**text, "evidence_ids": ids, "confidence": "INFERRED", "method": method,
+                                 "uncertainties": uncertainty}))
+        seen.add(story["id"])
+    for story, behavior in accepted:
+        story["behavior"] = behavior
+    return len(accepted), rejected
+
+
+def _redactor(review: dict, redact: bool | None) -> Redactor | None:
+    record = review.get("redactions", {})
+    enabled = record.get("enabled", True) if redact is None else redact
+    if not enabled:
+        return None
+    return Redactor(os.environ if record.get("environment") else None)
+
+
+def _sanitized(value: object, redactor: Redactor | None, depth: int = 0) -> object:
+    """Strip invisible characters, then redact: a token split by a zero-width character stays whole."""
+    if isinstance(value, str):
+        text = strip_controls(value, keep_newlines=True)
+        return redactor.text(text) if redactor else text
+    if depth >= 12:
+        return None
+    if isinstance(value, list):
+        return [_sanitized(item, redactor, depth + 1) for item in value[:200]]
+    if isinstance(value, dict):
+        return {key: _sanitized(item, redactor, depth + 1) for key, item in list(value.items())[:200]}
+    return value
+
+
+def _tidy(value: object, limit: int, redactor: Redactor | None) -> str:
+    """Tidy one line: strip invisible characters, redact, then clip (never the reverse)."""
+    if not isinstance(value, str):
+        return ""
+    text = " ".join(strip_controls(value).split())
+    return clip(redactor.text(text) if redactor else text, limit)
+
+
+def apply_narration(review: dict, data: object, *, redact: bool | None = None) -> None:
+    """Attach an explanation written outside this tool. It is validated, labeled and optional.
+
+    A malformed, hostile or rejected narration leaves the structural review intact.
+    """
+    analysis: dict = {"status": "failed", "source": "external_narration", "usage": {}}
+    review["behavior_analysis"] = analysis
+    review["narration"] = None
+    for story in review["stories"]:
+        story["behavior"] = None
+    if not isinstance(data, dict):
+        analysis["reason"] = "The narration is not a JSON object. Structural evidence is retained."
+        return
+    redactor = _redactor(review, redact)
+    try:
+        document = _sanitized(data, redactor)
+        if not isinstance(document, dict):
+            raise ValueError("narration is not an object")
+        entries = document.get("behavior_changes", [])
+        if not isinstance(entries, list) or len(entries) > MAX_BEHAVIOR_STORIES:
+            analysis["reason"] = "Narration must contain at most 24 behavior_changes entries."
+            return
+        narrator = clean(document.get("narrator"), 80)
+        if narrator:
+            analysis["narrator"] = narrator
+        supplied = {s["id"] for s in review["stories"] if narratable(review, s)}
+        accepted, rejected = accept_behavior(review, entries, supplied, "external_narration")
+        summary = _narration_summary(document)
+    except Exception as exc:  # a narration file must never block the review
+        for story in review["stories"]:
+            story["behavior"] = None
+        review["narration"] = None
+        analysis.update(status="failed", reason=f"The narration could not be processed ({type(exc).__name__}). "
+                                                "Structural evidence is retained.")
+        return
+    review["narration"] = {**summary, "narrator": narrator or None} if summary else None
+    unexplained = len(review["stories"]) - accepted
+    if accepted:
+        status = "partial" if rejected or unexplained else "complete"
+    elif rejected:
+        status = "failed"
+    else:
+        status = "complete" if summary else "abstained"
+    analysis.update(status=status, accepted=accepted, rejected=rejected, unexplained_stories=unexplained)
+    if rejected:
+        analysis["reason"] = "Some narration entries failed schema or source-citation validation."
+    elif status == "partial":
+        analysis["reason"] = "Some stories did not receive a usable cited behavior interpretation."
+    _merge_redactions(review, redactor)
+
+
+def _merge_redactions(review: dict, redactor: Redactor | None) -> None:
+    if redactor is None:
+        return
+    record = review["redactions"]
+    record["count"] += redactor.summary()["count"]
+    for kind, count in redactor.counts.items():
+        record["kinds"][kind] = record["kinds"].get(kind, 0) + count
+
+
+def _narration_summary(data: dict) -> dict:
+    result: dict = {}
+    for key, limit in (("headline", 200), ("not_proven", 1500), ("confidence_note", 1500)):
+        text = clean(data.get(key), limit)
+        if text:
+            result[key] = text
+    text = clean(data.get("summary"), 2000, multiline=True)
+    if text:
+        result["summary"] = text
+    safety = data.get("safety")
+    if isinstance(safety, dict):
+        text = clean(safety.get("text"), 600)
+        if text:
+            # An unknown level is read as the careful one; a safety claim is never strengthened.
+            result["safety"] = {"level": safety.get("level") if safety.get("level") in SAFETY_LEVELS else "careful",
+                                "text": text}
+    look = []
+    for item in data.get("look", []) if isinstance(data.get("look"), list) else []:
+        if isinstance(item, dict) and clean(item.get("title"), 160):
+            look.append({"title": clean(item.get("title"), 160), "where": clean(item.get("where"), 200),
+                         "why": clean(item.get("why"), 400)})
+        if len(look) == 5:
+            break
+    if look:
+        result["look"] = look
+    return result
+
+
+def apply_checks(review: dict, data: object, *, redact: bool | None = None) -> int:
+    """Record check, tester and reviewer verdicts supplied as data. Returns the steps kept."""
+    steps = data.get("steps") if isinstance(data, dict) else data
+    kept = []
+    redactor = _redactor(review, redact)
+    for item in steps if isinstance(steps, list) else []:
+        if not isinstance(item, dict):
+            continue
+        name = _tidy(item.get("name"), 80, redactor)
+        if not name:
+            continue
+        status = item.get("status") if item.get("status") in CHECK_STATUSES else "skipped"
+        kept.append({"name": name, "status": status, "text": _tidy(item.get("text"), 600, redactor)})
+        if len(kept) == MAX_CHECKS:
+            break
+    review["checks"] = kept
+    _merge_redactions(review, redactor)
+    return len(kept)
 
 
 def _valid_text(value: object, limit: int) -> bool:
@@ -446,11 +631,14 @@ def validate_review(review: dict) -> None:
             raise ReviewError("Evidence has an invalid source range.")
         if len(evidence["snippet"].split("\n")) != evidence["line_end"] - evidence["line_start"] + 1:
             raise ReviewError("Evidence range does not match its excerpt.")
+    if any(c.get("status") not in CHECK_STATUSES for c in review.get("checks", [])):
+        raise ReviewError("Check verdicts must be ok, fail or skipped.")
     for story in review["stories"]:
         if not set(story["evidence_ids"]) <= ids:
             raise ReviewError("Story references missing evidence.")
         if story["behavior"]:
-            if story["behavior"]["confidence"] != "INFERRED" or not set(story["behavior"]["evidence_ids"]) <= set(story["evidence_ids"]):
+            if (story["behavior"]["confidence"] != "INFERRED" or story["behavior"].get("method") not in BEHAVIOR_METHODS
+                    or not set(story["behavior"]["evidence_ids"]) <= set(story["evidence_ids"])):
                 raise ReviewError("Behavior must remain inferred and cite its story's evidence.")
         for side in ("base", "head"):
             for record in story["graphs"][side]["nodes"] + story["graphs"][side]["edges"]:
@@ -520,3 +708,12 @@ def save_review(review: dict, root: Path, *, output: Path | None = None) -> tupl
         if not retain_stage:
             shutil.rmtree(stage, ignore_errors=True)
     return json_path, html_path
+
+
+def write_output(path: Path, text: str) -> None:
+    """Atomically write one auxiliary output file; refuse a symlink target."""
+    path = Path(path)
+    if path.is_symlink():
+        raise ReviewError("Output files must not be symlinks.")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_text_atomic(path, text)

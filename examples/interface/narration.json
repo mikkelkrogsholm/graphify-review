@@ -1,0 +1,32 @@
+{
+  "narrator": "authored-demonstration",
+  "headline": "Totals are rounded to cents and the legacy tax helper is removed.",
+  "summary": "total() now rounds its result. legacy_tax() was deleted although checkout() still calls it.",
+  "safety": {
+    "level": "careful",
+    "text": "A removed helper is still referenced by checkout()."
+  },
+  "look": [
+    {
+      "title": "legacy_tax() removal",
+      "where": "billing.py",
+      "why": "checkout() still calls it"
+    }
+  ],
+  "not_proven": "No code was run.",
+  "behavior_changes": [
+    {
+      "story_id": "change-1",
+      "summary": "Totals are rounded; the tax helper is gone.",
+      "before_pseudocode": "total: return the sum of items\nlegacy_tax: return amount times 0.2",
+      "after_pseudocode": "total: return the sum of items rounded to 2 digits\nrounding: return value rounded to 2 digits",
+      "evidence_ids": [
+        "change-1-base-0",
+        "change-1-head-0"
+      ],
+      "uncertainties": [
+        "Callers of the removed helper were not analysed."
+      ]
+    }
+  ]
+}

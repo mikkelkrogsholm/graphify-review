@@ -33,3 +33,15 @@ uv run --frozen pyright
 uv build
 uv run --frozen python -m examples.generate
 ```
+
+## Offline interface contribution — 2026-10-20
+
+| Check | Result |
+|---|---|
+| Full suite, local Python 3.14.8 | 279 passed, 300 warnings (the Graphify cache notice) |
+| Ruff, Pyright | Passed, zero errors |
+| `uv build` | Wheel and source distribution built |
+| New regression areas | Test linkage and risk on real extracted graphs, byte-identical facts/evidence/comment across runs, refs-only run with no forge client or network and an unchanged checkout (including a read-only one), external narration validation, hostile text in every new input, secret redaction, hash-based CSP |
+| Browser | The example page renders with the hash-based policy applied |
+
+Only Python 3.14 was run locally for this change; the Python 3.10, 3.12 and 3.13 jobs and the Windows job run in CI. No live provider call was made and the example narration is authored. Reproduction is unchanged; `uv run --frozen python -m examples.generate` also rebuilds `examples/interface/`.
